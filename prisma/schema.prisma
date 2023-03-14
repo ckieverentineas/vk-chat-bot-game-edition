@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id     Int      @id @default(autoincrement())
+  idvk   Int
+  name   String   @default("zero")
+  lvl    Int      @default(1)
+  hp     Int      @default(2)
+  atk    Int      @default(1)
+  mana   Int      @default(0)
+  point  Int     @default(2)
+  location String @default("begin")
+  crdate DateTime @default(now())
+}
