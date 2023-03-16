@@ -89,7 +89,7 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 		const visit = await context.send(`⌛ Погода сегодня солнечная, идти фармить?`,
 			{ 	
 				keyboard: Keyboard.builder()
-				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'system_call' }, color: 'positive' }).oneTime().inline(),
+				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'battle_init' }, color: 'positive' }).oneTime().inline(),
 				answerTimeLimit
 			}
 		);
@@ -111,12 +111,12 @@ vk.updates.on('message_event', async (context: any, next: any) => {
 		"battle_init": Battle_Init,
 		"user_attack": User_Attack
 	}
-	try {
+	//try {
 		await config[context.eventPayload.command](context)
-	} catch (e) {
+	/*} catch (e) {
 		console.log(`Ошибка события ${e}`)
 	}
-	return await next();
+	return await next();*/
 })
 
 vk.updates.start().then(() => {

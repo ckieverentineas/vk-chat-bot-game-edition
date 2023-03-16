@@ -15,27 +15,6 @@ export async function Main_Menu_Init(context: any) {
     //const attached = await Image_Random(context, "bank")
     //const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Войти в портал:`, keyboard: await Main_Menu(context)/*, attachment: attached.toString()*/ })
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: "🔔 Порталы, в которые можно войти"
-        })
-    })
-}
-export async function Exit(context: any) {
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `💡 Сессия успешно завершена. Чтобы начать новую, напишите в госдуму! Вас рассмотрят, как кандидата`})
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: "🔔 Выход из системы успешно завершен!"
-        })
-    })
 }
 export async function Main_Menu(context: any) {
     const keyboard = new KeyboardBuilder()
@@ -55,15 +34,6 @@ export async function Portal_Shop(context: any) {
     .callbackButton({ label: 'Далее', payload: { command: 'user_info' }, color: 'secondary' })
     .callbackButton({ label: 'Назад', payload: { command: 'system_call' }, color: 'secondary' }).inline().oneTime()
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Как оказалось, данный портал ведёт в гнездо крыс`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: "🔔 Ужас, вот тебе и магазин..."
-        })
-    })
 }
 
 export async function Portal_Underground(context: any) {
@@ -76,15 +46,6 @@ export async function Portal_Underground(context: any) {
     .callbackButton({ label: 'Далее', payload: { command: 'user_info' }, color: 'secondary' })
     .callbackButton({ label: 'Назад', payload: { command: 'system_call' }, color: 'secondary' }).inline().oneTime()
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Вы попали на поляну слизней`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: "🔔 Треш, вот тебе и метро..."
-        })
-    })
 }
 
 export async function Portal_Park(context: any) {
@@ -97,15 +58,6 @@ export async function Portal_Park(context: any) {
     .callbackButton({ label: 'Далее', payload: { command: 'user_info' }, color: 'secondary' })
     .callbackButton({ label: 'Назад', payload: { command: 'system_call' }, color: 'secondary' }).inline().oneTime()
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Повсюду пчёлы, вероятно это улей`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: "🔔 Жесть, вот тебе и парк..."
-        })
-    })
 }
 
 export async function User_Info(context: any) {
@@ -118,15 +70,6 @@ export async function User_Info(context: any) {
     if (user && user.point <= 0) { keyboard.callbackButton({ label: 'Дальше', payload: { command: 'user_nickname' }, color: 'secondary' })}
     keyboard.inline().oneTime()        
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Распределите характеристики:\n⚔Атака: ${user?.atk}\n❤Здоровье: ${user?.hp}\n🌀Мана: ${user?.mana}\n⭐Очки: ${user?.point}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: "🔔 Жесть, вот тебе и парк..."
-        })
-    })
 }
 export async function User_Add_Attack(context: any) {
     //const attached = await Image_Random(context, "bank")
@@ -147,7 +90,7 @@ export async function User_Add_Attack(context: any) {
                 peer_id: context.peerId,
                 event_data: JSON.stringify({
                     type: "show_snackbar",
-                    text: `🔔 Повышение ⚔Атаки с ${user.atk} до ${user_add_attack.atk}`
+                    text: ``
                 })
             })    
             return
@@ -268,15 +211,6 @@ export async function User_Nickname(context: any) {
     }
     keyboard.inline().oneTime()        
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Выберите желаемый ник:`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: "🔔 А как же придумать свой никнейм:?"
-        })
-    })
 }
 
 export async function User_Nickname_Select(context: any) {
@@ -289,15 +223,6 @@ export async function User_Nickname_Select(context: any) {
         if (context.eventPayload.name) {
             const user_nickname_save = await prisma.user.update({ where: { id: user.id }, data: { name: context.eventPayload.name } })
             await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Поздравляем с ником: ${user_nickname_save.name}. Но вы слышите какой-то шум`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-            await vk.api.messages.sendMessageEventAnswer({
-                event_id: context.eventId,
-                user_id: context.userId,
-                peer_id: context.peerId,
-                event_data: JSON.stringify({
-                    type: "show_snackbar",
-                    text: `🔔 Ваш ник теперь: ${user_nickname_save.name}`
-                })
-            })
             return
         }
     }
@@ -319,11 +244,218 @@ async function User_Print(user: any) {
     for (let i = 0; i <= 1; i += 0.1) {
         bar += (i < bar_current) ? '🟥' : '◻'
     }
-    return `${smile}: ${bar} [${(bar_current*100).toFixed(2)}%]\n ❤${user.health}/${user.health_max} ⚔${user.atk} 🌀${user.mana} [${user.name}]`
+    return `${smile}: ${bar} [${(bar_current*100).toFixed(2)}%]\n ❤${user.health}/${user.health_max} ⚔${user.atk} 🌀${user.mana} [${user.name}]\n`
 }
 
+async function Counter_Enemy(queue_battle: any) {
+    //функция подсчета количества врагов и союзников
+    const counter: any = { enemy: 0, friend: 0}
+    const helper = ['enemy', 'friend']
+    for (let i in helper) {
+        for (let j in queue_battle) {
+            if (queue_battle[j].team == helper[i] && queue_battle[j].health > 0) {
+                counter[helper[i]] = counter[helper[i]]+1
+            }
+        }
+    }
+    return counter
+}
+    
+async function Use_Effect(id: any, effect_list: any) {
+    //контроллер эффектов в конфиге название из скиллов накладывающих эффекты, а значение название функции эффекта
+    const config: any = {
+        'Дезориентация': Effect_Disorientation
+    }
+    try {
+        const res = config[effect_list[id].effect](id)
+        return res
+    } catch (e) {
+        return e 
+    }
+}
+async function Effect_Disorientation(id: any, effect_list: any, queue_battle: any) {
+    //id это номер эффекта в очереди по которому можно узнать цель эффект и длительность, верните в status значение False чтобы вызвать пропуск хода, в значение message гененрируем тексты эффектов
+    let res = ''
+    let status = true
+    if (effect_list[id]?.time > 0) {
+        res = `На ${queue_battle[effect_list[id].target.name]} применен эффект: ${effect_list[id].effect}\n`
+        //благодаря формуле обратного процента возвращаем в исходное значение паараметры персонажей по окончанию длительности, главное чтобы их длительность была не больше 1 хода) иначе придется усложнять адллгоритм
+        queue_battle[effect_list[id].target.atk]*=0.9
+        res += `Урон понижен на 10%, теперь его значение ${queue_battle[effect_list[id].target.atk]}\n`
+        if (randomInt(1,100) < 50) {
+            status = false
+            res += ' Оглушение! Пропуск хода\n'
+            effect_list[id].time-=1
+        }
+    } else {
+        queue_battle[effect_list[id].target.atk] = queue_battle[effect_list[id].target.atk] * 100/90
+        res += `Дезоринтация окончила свое действие, дебаф снят c ${queue_battle[effect_list[id].target.name]}, теперь значение урона снова ${queue_battle[effect_list[id].target.atk]}\n`
+        effect_list.pop(id)
+    }
+    const answer = {
+        'message': res,
+        'status': status
+    }
+    return answer       
+}
+
+async function Target(queue_battle: any, type: any) {
+    //функция подсчета количества врагов и союзников
+    const detected: any = { enemy: [], friend: []}
+    const helper = ['enemy', 'friend']
+    for (const i in helper) {
+        for (const j in queue_battle) {
+            if (queue_battle[j].team == helper[i] && queue_battle[j].health > 0) {
+                detected[helper[i]].push(j)
+            }
+        }
+        
+    } 
+    return detected[type][randomInt(0, detected[type].length)]
+}
+async function Use_Skill(skill: any, target: any, current: any, queue_battle: any, effect_list: any) {
+    //контроллер скиллов в конфиге название в скиллах персонажей, а значение название функции скилла
+    const config: any = {
+        'Апперкот': Skill_Uppercut
+    }
+    try {
+        const res = config[skill](target, current, queue_battle, effect_list)
+        return res
+    } catch (e) {
+        return e
+    }
+}
+async function Skill_Uppercut(target: any, current: any, queue_battle: any, effect_list: any) {
+    queue_battle[target].health -= queue_battle[current].atk
+    let res = `${queue_battle[current].name} нанес урона: ${queue_battle[current].atk} по ${queue_battle[target].name} у цели осталось здоровья: ${queue_battle[target].health}`
+    if (randomInt(1,100) < 50) {
+        effect_list.push({'target': target, 'effect': 'Дезориентация', 'time': 1})
+        res += ' наложена Дезоринтация на цель!\n'
+    }
+    return res
+}
+        
+        
 export async function Battle_Init(context: any) {
-    //const attached = await Image_Random(context, "bank")
+    //Стадия подготовки данных к битве
+    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+    const creature: any = {
+        "Парк": [{ name: "Слизь", type: "bot", team: 'enemy', atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Апперкот', 'Атака'] }], 
+        "Магазин": [{ name: "Пчела", type: "bot", team: 'enemy', atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Апперкот', 'Атака'] }], 
+        "Метро": [
+            { name: "Мышь Черная", type: "bot", team: 'enemy', atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Апперкот', 'Атака'] },
+            { name: "Мышь Серая", type: "bot", team: 'enemy', atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Апперкот', 'Атака'] }
+        ],
+        "Игрок": [{ name: `${user?.name}`, type: "player", 'team': 'friend', atk: `${user?.atk}`, health: `${user?.hp}`, health_max: `${user?.hp}`, mana: `${user?.mana}`, skill: ['Апперкот', 'Атака'] }]
+    }
+    const queue_battle: any = []
+    const effect_list: any = []
+    //Стадия инициализации мобов и игрока
+    queue_battle.push(creature["Игрок"][randomInt(0, creature["Игрок"].length)])
+    queue_battle.push(creature[user.location][randomInt(0, creature[user.location].length)])
+    //cтатус бары
+    let event_logger = '' 
+    for (let i in queue_battle) {
+        event_logger += await User_Print(queue_battle[i])
+    }
+    const battle_init = await prisma.battle.upsert({ create: { id_user: user.id, queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list) }, update: { queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list) }, where: { id_user: user?.id }})
+    
+    const keyboard = new KeyboardBuilder()
+    .callbackButton({ label: 'Атака', payload: { command: 'user_attack', id_battle: battle_init.id_user }, color: 'secondary' })
+    keyboard.inline().oneTime()        
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${queue_battle[0].type == 'player' ? "Вам повезло, вы первым заметили врага" : "Вы не заметили врага и он атаковал вас"}\n${event_logger}`, keyboard: keyboard/*, attachment: attached.toString()*/ })
+}
+export async function User_Attack(context: any) {
+    const id_battle = context.eventPayload.id_battle
+    const battle_data: any = await prisma.battle.findFirst({ where: { id: id_battle } })
+    const queue_battle = JSON.parse(battle_data.queue_battle)
+    const effect_list = JSON.parse(battle_data.effect_list)
+    //let current = context.eventPayload.current
+    const alive_counter: any = await Counter_Enemy(queue_battle)
+    console.log("Битва начинается:", alive_counter)
+    let event_logger = '' 
+    for (const cur in queue_battle) {
+        const current = cur
+        if (alive_counter.friend > 0 && alive_counter.enemy > 0) {
+            console.log('battle')
+            /*for (const i in effect_list) {
+                if (effect_list[i]?.target == current) {
+                    const effect_sel = await Use_Effect(i, effect_list)
+                    if (effect_sel?.status == false) {
+                        /*if (current+2 > (alive_counter.friend + alive_counter.enemy)) {
+                            current = 0
+                        }
+                        else {
+                            current+=1
+                        }
+                    }
+                    event_logger += effect_sel?.message
+                }
+            }*/
+            console.log('effect actived')
+            if (queue_battle[current].team == 'enemy' && queue_battle[current].health > 0) {
+                //если ходит компьютер
+                console.log('enemy turn')
+                const target = await Target(queue_battle, 'friend')
+                console.log("🚀 ~ file: contoller.ts:398 ~ User_Attack ~ target:", target)
+                const skill_sel = queue_battle[current].skill
+                console.log("🚀 ~ file: contoller.ts:400 ~ User_Attack ~ skill_sel:", skill_sel)
+                event_logger += `Узри всю мощь: ${skill_sel[0]}`
+                const skill_status = await Use_Skill(skill_sel[0], Number(target), current, queue_battle, effect_list)
+                event_logger += skill_status
+            }
+            console.log('enemy end turn')
+            if (queue_battle[current].team == 'friend' && queue_battle[current].health > 0) {
+                //если ходит игрок
+                console.log('player turn')
+                const skill_sel = queue_battle[current].skill
+                const target = await Target(queue_battle, 'enemy')
+                event_logger += `Вы применили способность: ${skill_sel[0]}`
+                const skill_status = await Use_Skill(skill_sel[0], target, current, queue_battle, effect_list)
+                event_logger += skill_status
+            }
+            /*if (current+1 < (alive_counter.friend + alive_counter.enemy)) {
+                current+=1
+            } else {
+                current = 0
+            }*/
+        }
+        const battle_init = await prisma.battle.upsert({ create: { id_user: battle_data.id, queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list) }, update: { queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list) }, where: { id_user: battle_data?.id }})
+    }
+    
+    /*if (turn) {
+        player.health -= enemy.atk
+        event += `Вы нанесли  💥${player.atk}\n`
+        enemy.health -= player.atk
+        event += `Враг нанес  💥${enemy.atk}\n`
+    } else {
+        enemy.health -= player.atk
+        event += `Враг нанес  💥${enemy.atk}\n`
+        player.health -= enemy.atk
+        event += `Вы нанесли  💥${player.atk}\n`
+    }*/
+    const keyboard = new KeyboardBuilder()
+    .callbackButton({ label: 'Атака', payload: { command: 'user_attack', id_battle: id_battle }, color: 'secondary' })
+    /*if (player.health <= 0 || enemy.health <= 0) {
+        if (player.health <= 0 ) {
+            event += `Вы умерли 💥${player.name} Попробуйте снова, владыка демонов!\n`
+            keyboard.callbackButton({ label: 'Возродиться', payload: { command: 'user_revival', player, enemy, turn }, color: 'secondary' })
+        }
+        if (enemy.health <= 0) {
+            event += `Вы одежрали победу над 💥${enemy.name}. Поздравляем!\n`
+            keyboard.callbackButton({ label: 'Победа Нафиг', payload: { command: 'user_win', player, enemy, turn }, color: 'secondary' })
+        }
+    } else {
+        keyboard.callbackButton({ label: 'Атака', payload: { command: 'user_attack', player, enemy, turn }, color: 'secondary' })
+    }*/
+    for (let i in queue_battle) {
+        event_logger += await User_Print(queue_battle[i])
+    }
+    keyboard.inline().oneTime()        
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
+}
+
+async function User_Win(context: any) {
     const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
     const mob = {
         "Парк": [{ name: "Слизь", type: "bot", atk: 1, health: 4, health_max: 4, mana: 0}], 
@@ -339,48 +471,6 @@ export async function Battle_Init(context: any) {
     .callbackButton({ label: 'Атака', payload: { command: 'user_attack', player, enemy, turn }, color: 'secondary' })
     keyboard.inline().oneTime()        
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${turn ? "Вам повезло, вы первым заметили врага" : "Вы не заметили врага и он атаковал вас"}\n${await User_Print(player)}\n${await User_Print(enemy)}`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: `🔔 ${turn ? "Ваш ход" : "Враг атаковал вас"}`
-        })
-    })
-}
-
-export async function User_Attack(context: any) {
-    const player = context.eventPayload.player
-    const enemy = context.eventPayload.enemy
-    const turn = context.eventPayload.turn
-    let event = ''
-    if (turn) {
-        player.health -= enemy.atk
-        event += `Вы нанесли  💥${player.atk}\n`
-        enemy.health -= player.atk
-        event += `Враг нанес  💥${enemy.atk}\n`
-    } else {
-        enemy.health -= player.atk
-        event += `Враг нанес  💥${enemy.atk}\n`
-        player.health -= enemy.atk
-        event += `Вы нанесли  💥${player.atk}\n`
-    }
-    const keyboard = new KeyboardBuilder()
-    if (player.health <= 0 || enemy.health <= 0) {
-        if (player.health <= 0 ) {
-            event += `Вы умерли 💥${player.name} Попробуйте снова, владыка демонов!\n`
-            keyboard.callbackButton({ label: 'Возродиться', payload: { command: 'user_revival', player, enemy, turn }, color: 'secondary' })
-        }
-        if (enemy.health <= 0) {
-            event += `Вы одежрали победу над 💥${enemy.name}. Поздравляем!\n`
-            keyboard.callbackButton({ label: 'Победа Нафиг', payload: { command: 'user_win', player, enemy, turn }, color: 'secondary' })
-        }
-    } else {
-        keyboard.callbackButton({ label: 'Атака', payload: { command: 'user_attack', player, enemy, turn }, color: 'secondary' })
-    }
-    keyboard.inline().oneTime()        
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event}\n${await User_Print(player)}\n${await User_Print(enemy)}`, keyboard: keyboard/*, attachment: attached.toString()*/ })
     await vk.api.messages.sendMessageEventAnswer({
         event_id: context.eventId,
         user_id: context.userId,
