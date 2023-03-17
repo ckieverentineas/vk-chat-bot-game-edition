@@ -28,7 +28,7 @@ export async function Portal_Shop(context: any) {
     //const attached = await Image_Random(context, "bank")
     const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
     if (user) {
-        const user_location = await prisma.user.update({ where: { id: user.id }, data: { location: context.eventPayload.location }})
+        const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: 7 }})
     }
     const keyboard = new KeyboardBuilder()
     .callbackButton({ label: 'Далее', payload: { command: 'user_info' }, color: 'secondary' })
@@ -40,7 +40,7 @@ export async function Portal_Underground(context: any) {
     //const attached = await Image_Random(context, "bank")
     const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
     if (user) {
-        const user_location = await prisma.user.update({ where: { id: user.id }, data: { location: context.eventPayload.location }})
+        const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: 13 }})
     }
     const keyboard = new KeyboardBuilder()
     .callbackButton({ label: 'Далее', payload: { command: 'user_info' }, color: 'secondary' })
@@ -52,7 +52,7 @@ export async function Portal_Park(context: any) {
     //const attached = await Image_Random(context, "bank")
     const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
     if (user) {
-        const user_location = await prisma.user.update({ where: { id: user.id }, data: { location: context.eventPayload.location }})
+        const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: 1 }})
     }
     const keyboard = new KeyboardBuilder()
     .callbackButton({ label: 'Далее', payload: { command: 'user_info' }, color: 'secondary' })
@@ -90,7 +90,7 @@ export async function User_Add_Attack(context: any) {
                 peer_id: context.peerId,
                 event_data: JSON.stringify({
                     type: "show_snackbar",
-                    text: ``
+                    text: `🔔`
                 })
             })    
             return
@@ -244,7 +244,7 @@ async function User_Print(user: any) {
     for (let i = 0; i <= 1; i += 0.1) {
         bar += (i < bar_current) ? '🟥' : '◻'
     }
-    return `${smile}: ${bar} [${(bar_current*100).toFixed(2)}%]\n ❤${user.health}/${user.health_max} ⚔${user.atk} 🌀${user.mana} [${user.name}]\n`
+    return `\n${smile}: ${bar} [${(bar_current*100).toFixed(2)}%]\n ❤${user.health}/${user.health_max} ⚔${user.atk} 🌀${user.mana} [${user.name}]\n`
 }
 
 async function Counter_Enemy(queue_battle: any) {
@@ -309,7 +309,6 @@ async function Target(queue_battle: any, type: any) {
                 detected[helper[i]].push(j)
             }
         }
-        
     } 
     return detected[type][randomInt(0, detected[type].length)]
 }
@@ -351,8 +350,18 @@ export async function Battle_Init(context: any) {
     const queue_battle: any = []
     const effect_list: any = []
     //Стадия инициализации мобов и игрока
+    const region: any = await prisma.region.findFirst({where: { uid: user.id_region }, include: { location: true}})
     queue_battle.push(creature["Игрок"][randomInt(0, creature["Игрок"].length)])
-    queue_battle.push(creature[user.location][randomInt(0, creature[user.location].length)])
+    if (region.mob_min == region.mob_max) {
+        for (let i=0; i < region.mob_min; i++) {
+            queue_battle.push(creature[region.location.name][randomInt(0, creature[region.location.name].length)])
+        }
+    } else {
+        const limiter = randomInt(region.mob_min, region.mob_max)
+        for (let i=0; i < limiter; i++) {
+            queue_battle.push(creature[region.location.name][randomInt(0, creature[region.location.name].length)])
+        }
+    }
     //cтатус бары
     let event_logger = '' 
     for (let i in queue_battle) {
@@ -374,6 +383,7 @@ export async function User_Attack(context: any) {
     const alive_counter: any = await Counter_Enemy(queue_battle)
     console.log("Битва начинается:", alive_counter)
     let event_logger = '' 
+    const keyboard = new KeyboardBuilder()
     for (const cur in queue_battle) {
         const current = cur
         if (alive_counter.friend > 0 && alive_counter.enemy > 0) {
@@ -421,9 +431,33 @@ export async function User_Attack(context: any) {
             }*/
         }
         const battle_init = await prisma.battle.upsert({ create: { id_user: battle_data.id, queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list) }, update: { queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list) }, where: { id_user: battle_data?.id }})
+    } 
+    const alive_counter_end: any = await Counter_Enemy(queue_battle)
+    if (alive_counter_end.friend <= 0 || alive_counter_end.enemy <= 0) {
+        if (alive_counter_end.friend > 0) {
+            const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+            const region: any = await prisma.region.findFirst({where: { uid: user.id_region }})
+            const region_next: any = []
+            const region_current = JSON.parse(region.road)
+            for (const i in region_current) {
+                const region_temp = await prisma.region.findFirst({ where: { uid: region_current[i].uid } })
+                region_next.push(region_temp)
+            }
+            event_logger += `Куда пойдем дальше:\n`
+            for (const i in region_next) {
+                event_logger += `${region_next[i].label} - ${region_next[i].name}\n`
+                keyboard.callbackButton({ label: region_next[i].label, payload: { command: 'user_win', uid: region_next[i].uid }, color: 'secondary' }).row()
+            }
+            event_logger += `Поздравляем с победой, но впереди развилка, куда пойдем?`
+        } else {
+            keyboard.callbackButton({ label: 'Возрождение', payload: { command: 'battle_init' }, color: 'secondary' })
+            event_logger += `Вы мертвы, Владыка демонов попробуйте снова!`
+        }
+    } else {
+        keyboard.callbackButton({ label: 'Атака', payload: { command: 'user_attack', id_battle: id_battle }, color: 'secondary' })
     }
     
-    /*if (turn) {
+    /*if (turn) {Вы довольный победой прошли дальше, но здесь дальше 
         player.health -= enemy.atk
         event += `Вы нанесли  💥${player.atk}\n`
         enemy.health -= player.atk
@@ -434,8 +468,8 @@ export async function User_Attack(context: any) {
         player.health -= enemy.atk
         event += `Вы нанесли  💥${player.atk}\n`
     }*/
-    const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: 'Атака', payload: { command: 'user_attack', id_battle: id_battle }, color: 'secondary' })
+    
+    
     /*if (player.health <= 0 || enemy.health <= 0) {
         if (player.health <= 0 ) {
             event += `Вы умерли 💥${player.name} Попробуйте снова, владыка демонов!\n`
@@ -449,35 +483,25 @@ export async function User_Attack(context: any) {
         keyboard.callbackButton({ label: 'Атака', payload: { command: 'user_attack', player, enemy, turn }, color: 'secondary' })
     }*/
     for (let i in queue_battle) {
+        if (queue_battle[i].health > 0)
         event_logger += await User_Print(queue_battle[i])
     }
+    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+    const region: any = await prisma.region.findFirst({where: { uid: user.id_region }, include: { location: true}})
+
+    event_logger += `🌐:${region.location.name}-${region.name}\n`
     keyboard.inline().oneTime()        
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
 }
 
-async function User_Win(context: any) {
-    const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
-    const mob = {
-        "Парк": [{ name: "Слизь", type: "bot", atk: 1, health: 4, health_max: 4, mana: 0}], 
-        "Магазин": [{ name: "Пчела", type: "bot", atk: 2, health: 2, health_max: 2, mana: 0}], 
-        "Метро": [{ name: "Мышь Черная", type: "bot", atk: 2, health: 2, health_max: 2, mana: 0},{ name: "Мышь Серая", type: "bot", atk: 1, health: 4, health_max: 4, mana: 0}]
-    }
-    console.log("🚀 ~ file: contoller.ts:336 ~ Battle_Init ~ mob[user.location]:", mob[user.location])
-    const enemy = mob[user.location][randomInt(0, mob[user.location].length)] || mob[user.location]
-    const player = { name: `${user?.name}`, type: "player", atk: `${user?.atk}`, health: `${user?.hp}`, health_max: `${user?.hp}`, mana: `${user?.mana}`}
+export async function User_Win(context: any) {
+    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+    const uid = context.eventPayload.uid
+    const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: uid }})
+    let event_logger = 'Опа чирик, новая локация и мобы нафиг!' 
     
-    const turn = randomInt(0, 100) > 50 ? true : false
     const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: 'Атака', payload: { command: 'user_attack', player, enemy, turn }, color: 'secondary' })
+    .callbackButton({ label: 'Осмотреться', payload: { command: 'battle_init' }, color: 'secondary' })
     keyboard.inline().oneTime()        
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${turn ? "Вам повезло, вы первым заметили врага" : "Вы не заметили врага и он атаковал вас"}\n${await User_Print(player)}\n${await User_Print(enemy)}`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: `🔔 ${turn ? "Ваш ход" : "Враг атаковал вас"}`
-        })
-    })
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
 }

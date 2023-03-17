@@ -8,17 +8,45 @@ datasource db {
 }
 
 model User {
-  id       Int      @id @default(autoincrement())
-  idvk     Int
-  name     String   @default("zero")
-  lvl      Int      @default(1)
-  hp       Int      @default(2)
-  atk      Int      @default(1)
-  mana     Int      @default(0)
-  point    Int      @default(2)
-  location String   @default("begin")
-  crdate   DateTime @default(now())
-  Battle   Battle[]
+  id        Int      @id @default(autoincrement())
+  idvk      Int
+  name      String   @default("zero")
+  lvl       Int      @default(1)
+  hp        Int      @default(2)
+  atk       Int      @default(1)
+  mana      Int      @default(0)
+  point     Int      @default(2)
+  id_region Int      @default(0)
+  crdate    DateTime @default(now())
+  Battle    Battle[]
+}
+
+model Location {
+  id     Int      @id @default(autoincrement())
+  name   String   @unique
+  Region Region[]
+}
+
+model Region {
+  id          Int      @id @default(autoincrement())
+  id_location Int
+  uid         Int @unique
+  road      String
+  label       String
+  name        String
+  mob_min     Int
+  mob_max     Int
+  location    Location @relation(fields: [id_location], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  Input       Road[]   @relation("Input")
+  Output      Road[]   @relation("Output")
+}
+
+model Road {
+  id               Int    @id @default(autoincrement())
+  id_region_input  Int
+  id_region_output Int
+  region_input     Region @relation("Input", fields: [id_region_input], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  region_output    Region @relation("Output", fields: [id_region_output], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model Battle {

@@ -12,7 +12,7 @@ import { send } from 'process';
 import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 import { env } from 'process';
 import prisma from './engine/events/module/prisma_client';
-import { Battle_Init, Main_Menu_Init, Portal_Park, Portal_Shop, Portal_Underground, User_Add_Attack, User_Add_Health, User_Add_Mana, User_Attack, User_Info, User_Nickname, User_Nickname_Select } from './engine/events/contoller';
+import { Battle_Init, Main_Menu_Init, Portal_Park, Portal_Shop, Portal_Underground, User_Add_Attack, User_Add_Health, User_Add_Mana, User_Attack, User_Info, User_Nickname, User_Nickname_Select, User_Win } from './engine/events/contoller';
 import { User } from '@prisma/client';
 dotenv.config()
 
@@ -97,6 +97,8 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 	return next();
 })
 vk.updates.on('message_event', async (context: any, next: any) => { 
+	const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+	console.log(`${context.eventPayload.command} > ${user.id_region}`)
 	const config: any = {
 		"system_call": Main_Menu_Init,
 		"portal_shop": Portal_Shop,
@@ -109,7 +111,8 @@ vk.updates.on('message_event', async (context: any, next: any) => {
 		"user_nickname": User_Nickname,
 		"user_nickname_select": User_Nickname_Select,
 		"battle_init": Battle_Init,
-		"user_attack": User_Attack
+		"user_attack": User_Attack,
+		"user_win": User_Win,
 	}
 	//try {
 		await config[context.eventPayload.command](context)
