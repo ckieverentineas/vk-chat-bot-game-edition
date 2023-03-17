@@ -278,10 +278,10 @@ async function Effect_Disorientation(id: any, effect_list: any, queue_battle: an
     let res = ''
     let status = true
     if (effect_list[id]?.time > 0) {
-        res = `На ${queue_battle[effect_list[id].target.name]} применен эффект: ${effect_list[id].effect}\n`
+        res = `🌀${queue_battle[effect_list[id].target.name]}: ${effect_list[id].effect}\n`
         //благодаря формуле обратного процента возвращаем в исходное значение паараметры персонажей по окончанию длительности, главное чтобы их длительность была не больше 1 хода) иначе придется усложнять адллгоритм
         queue_battle[effect_list[id].target.atk]*=0.9
-        res += `Урон понижен на 10%, теперь его значение ${queue_battle[effect_list[id].target.atk]}\n`
+        res += `🌀${queue_battle[effect_list[id].target.name]}: ⚔${queue_battle[effect_list[id].target.atk]}(-10%)\n`
         if (randomInt(1,100) < 50) {
             status = false
             res += ' Оглушение! Пропуск хода\n'
@@ -289,7 +289,7 @@ async function Effect_Disorientation(id: any, effect_list: any, queue_battle: an
         }
     } else {
         queue_battle[effect_list[id].target.atk] = queue_battle[effect_list[id].target.atk] * 100/90
-        res += `Дезоринтация окончила свое действие, дебаф снят c ${queue_battle[effect_list[id].target.name]}, теперь значение урона снова ${queue_battle[effect_list[id].target.atk]}\n`
+        res += `🌀${queue_battle[effect_list[id].target.name]}: ⚔${queue_battle[effect_list[id].target.atk]}\n`
         effect_list.pop(id)
     }
     const answer = {
@@ -318,18 +318,18 @@ async function Use_Skill(skill: any, target: any, current: any, queue_battle: an
         'Апперкот': Skill_Uppercut
     }
     try {
-        const res = config[skill](target, current, queue_battle, effect_list)
+        const res = config[skill](skill, target, current, queue_battle, effect_list)
         return res
     } catch (e) {
         return e
     }
 }
-async function Skill_Uppercut(target: any, current: any, queue_battle: any, effect_list: any) {
+async function Skill_Uppercut(skill:any, target: any, current: any, queue_battle: any, effect_list: any) {
     queue_battle[target].health -= queue_battle[current].atk
-    let res = `${queue_battle[current].name} нанес урона: ${queue_battle[current].atk} по ${queue_battle[target].name} у цели осталось здоровья: ${queue_battle[target].health}`
+    let res = `🔪${queue_battle[current].name}>${skill}>${queue_battle[target].name}: 💥${queue_battle[current].atk}\n`
     if (randomInt(1,100) < 50) {
         effect_list.push({'target': target, 'effect': 'Дезориентация', 'time': 1})
-        res += ' наложена Дезоринтация на цель!\n'
+        res += `🌀${queue_battle[target].name}:Дезоринтация!\n`
     }
     return res
 }
@@ -351,14 +351,14 @@ export async function Battle_Init(context: any) {
     const effect_list: any = []
     //Стадия инициализации мобов и игрока
     const region: any = await prisma.region.findFirst({where: { uid: user.id_region }, include: { location: true}})
-    queue_battle.push(creature["Игрок"][randomInt(0, creature["Игрок"].length)])
-    if (region.mob_min == region.mob_max) {
-        for (let i=0; i < region.mob_min; i++) {
-            queue_battle.push(creature[region.location.name][randomInt(0, creature[region.location.name].length)])
-        }
-    } else {
-        const limiter = randomInt(region.mob_min, region.mob_max)
-        for (let i=0; i < limiter; i++) {
+    const enemy_will: any = (region.mob_min == region.mob_max) ? region.mob_min : randomInt(region.mob_min, region.mob_max)
+    let player_turn = false
+    for (let i=0; i < enemy_will+1; i++) {
+        const koef = randomInt(0, 100)
+        if ((koef > 50 && !player_turn) || (!player_turn && i == enemy_will+1)) {
+            player_turn = true
+            queue_battle.push(creature["Игрок"][randomInt(0, creature["Игрок"].length)])
+        } else {
             queue_battle.push(creature[region.location.name][randomInt(0, creature[region.location.name].length)])
         }
     }
@@ -380,14 +380,14 @@ export async function User_Attack(context: any) {
     const queue_battle = JSON.parse(battle_data.queue_battle)
     const effect_list = JSON.parse(battle_data.effect_list)
     //let current = context.eventPayload.current
-    const alive_counter: any = await Counter_Enemy(queue_battle)
-    console.log("Битва начинается:", alive_counter)
+    
     let event_logger = '' 
     const keyboard = new KeyboardBuilder()
     for (const cur in queue_battle) {
         const current = cur
+        const alive_counter: any = await Counter_Enemy(queue_battle)
+        console.log("Битва начинается:", alive_counter)
         if (alive_counter.friend > 0 && alive_counter.enemy > 0) {
-            console.log('battle')
             /*for (const i in effect_list) {
                 if (effect_list[i]?.target == current) {
                     const effect_sel = await Use_Effect(i, effect_list)
@@ -407,20 +407,15 @@ export async function User_Attack(context: any) {
                 //если ходит компьютер
                 console.log('enemy turn')
                 const target = await Target(queue_battle, 'friend')
-                console.log("🚀 ~ file: contoller.ts:398 ~ User_Attack ~ target:", target)
                 const skill_sel = queue_battle[current].skill
-                console.log("🚀 ~ file: contoller.ts:400 ~ User_Attack ~ skill_sel:", skill_sel)
-                event_logger += `Узри всю мощь: ${skill_sel[0]}`
                 const skill_status = await Use_Skill(skill_sel[0], Number(target), current, queue_battle, effect_list)
                 event_logger += skill_status
             }
-            console.log('enemy end turn')
             if (queue_battle[current].team == 'friend' && queue_battle[current].health > 0) {
                 //если ходит игрок
                 console.log('player turn')
                 const skill_sel = queue_battle[current].skill
                 const target = await Target(queue_battle, 'enemy')
-                event_logger += `Вы применили способность: ${skill_sel[0]}`
                 const skill_status = await Use_Skill(skill_sel[0], target, current, queue_battle, effect_list)
                 event_logger += skill_status
             }
