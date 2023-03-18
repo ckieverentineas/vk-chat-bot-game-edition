@@ -90,7 +90,7 @@ export async function User_Add_Attack(context: any) {
                 peer_id: context.peerId,
                 event_data: JSON.stringify({
                     type: "show_snackbar",
-                    text: `🔔`
+                    text: `🔔 Повышение ⚔Атака с ${user.atk} до ${user_add_attack.atk}`
                 })
             })    
             return
@@ -315,7 +315,9 @@ async function Target(queue_battle: any, type: any) {
 async function Use_Skill(skill: any, target: any, current: any, queue_battle: any, effect_list: any) {
     //контроллер скиллов в конфиге название в скиллах персонажей, а значение название функции скилла
     const config: any = {
-        'Апперкот': Skill_Uppercut
+        'Атака': Skill_Attack,
+        'Призыв обычных слизней': Skill_Summoning_Usually_Slime,
+        'Медовое исцеление': Skill_Honey_Healing
     }
     try {
         const res = config[skill](skill, target, current, queue_battle, effect_list)
@@ -324,14 +326,37 @@ async function Use_Skill(skill: any, target: any, current: any, queue_battle: an
         return e
     }
 }
-async function Skill_Uppercut(skill:any, target: any, current: any, queue_battle: any, effect_list: any) {
+async function Skill_Attack(skill:any, target: any, current: any, queue_battle: any, effect_list: any) {
     queue_battle[target].health -= queue_battle[current].atk
     let res = `🔪${queue_battle[current].name}>${skill}>${queue_battle[target].name}: 💥${queue_battle[current].atk}\n`
-    if (randomInt(1,100) < 50) {
+    /*if (randomInt(1,100) < 50) {
         effect_list.push({'target': target, 'effect': 'Дезориентация', 'time': 1})
         res += `🌀${queue_battle[target].name}:Дезоринтация!\n`
-    }
+    }*/
     return res
+}
+async function Skill_Summoning_Usually_Slime(skill:any, target: any, current: any, queue_battle: any, effect_list: any) {
+    if (queue_battle[current].health <= 0 && queue_battle[current].mana > 0) { 
+        let summoning_counter = 0
+        for (let i=0; i<queue_battle[current].mana; i++) {
+            queue_battle.push({ name: "Слизь", type: "bot", team: 'enemy', atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'] }) 
+            summoning_counter++
+        }
+        queue_battle[current].mana-=summoning_counter
+        let res = `🔪${queue_battle[current].name}>${skill}>Призвано обычных слизней: ${summoning_counter}\n`
+        return res
+    }
+    return ''
+}
+async function Skill_Honey_Healing(skill:any, target: any, current: any, queue_battle: any, effect_list: any) {
+    if (queue_battle[current].health <= queue_battle[current].health_max && queue_battle[target].health - queue_battle[current].atk > 0 && queue_battle[current].mana > 0) { 
+        queue_battle[current].health+=3
+        queue_battle[current].mana--
+
+        let res = `🔪${queue_battle[current].name}>${skill}>Восстановлено здоровья: 3\n`
+        return res
+    }
+    return ''
 }
         
         
@@ -339,18 +364,25 @@ export async function Battle_Init(context: any) {
     //Стадия подготовки данных к битве
     const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
     const creature: any = {
-        "Парк": [{ name: "Слизь", type: "bot", team: 'enemy', atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Апперкот', 'Атака'] }], 
-        "Магазин": [{ name: "Пчела", type: "bot", team: 'enemy', atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Апперкот', 'Атака'] }], 
+        "Парк": [
+            { name: "Слизь", type: "bot", team: 'enemy', atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'] },
+            { name: "Слизень Босс", type: "boss", team: 'enemy', atk: 2, health: 8, health_max: 8, mana: 2, skill: ['Атака', 'Призыв обычных слизней'] }
+        ], 
+        "Магазин": [
+            { name: "Пчела", type: "bot", team: 'enemy', atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Атака'] },
+            { name: "Пчела Босс", type: "boss", team: 'enemy', atk: 3, health: 6, health_max: 6, mana: 2, skill: ['Атака', 'Медовое исцеление'] },
+        ], 
         "Метро": [
-            { name: "Мышь Черная", type: "bot", team: 'enemy', atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Апперкот', 'Атака'] },
-            { name: "Мышь Серая", type: "bot", team: 'enemy', atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Апперкот', 'Атака'] }
+            { name: "Мышь Черная", type: "bot", team: 'enemy', atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Атака'] },
+            { name: "Мышь Серая", type: "bot", team: 'enemy', atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'] }
         ],
-        "Игрок": [{ name: `${user?.name}`, type: "player", 'team': 'friend', atk: `${user?.atk}`, health: `${user?.hp}`, health_max: `${user?.hp}`, mana: `${user?.mana}`, skill: ['Апперкот', 'Атака'] }]
+        "Игрок": [{ name: `${user?.name}`, type: "player", 'team': 'friend', atk: `${user?.atk}`, health: `${user?.hp}`, health_max: `${user?.hp}`, mana: `${user?.mana}`, skill: ['Атака', 'Призыв обычных слизней', 'Медовое исцеление'] }]
     }
     const queue_battle: any = []
     const effect_list: any = []
     //Стадия инициализации мобов и игрока
     const region: any = await prisma.region.findFirst({where: { uid: user.id_region }, include: { location: true}})
+    console.log("🚀 ~ file: contoller.ts:385 ~ Battle_Init ~ region:", region)
     const enemy_will: any = (region.mob_min == region.mob_max) ? region.mob_min : randomInt(region.mob_min, region.mob_max)
     let player_turn = false
     for (let i=0; i < enemy_will+1; i++) {
@@ -359,7 +391,7 @@ export async function Battle_Init(context: any) {
             player_turn = true
             queue_battle.push(creature["Игрок"][randomInt(0, creature["Игрок"].length)])
         } else {
-            queue_battle.push(creature[region.location.name][randomInt(0, creature[region.location.name].length)])
+            queue_battle.push(creature[region.location.name][randomInt(0, creature[region.location.name]?.length)])
         }
     }
     //cтатус бары
@@ -416,7 +448,7 @@ export async function User_Attack(context: any) {
                 console.log('player turn')
                 const skill_sel = queue_battle[current].skill
                 const target = await Target(queue_battle, 'enemy')
-                const skill_status = await Use_Skill(skill_sel[0], target, current, queue_battle, effect_list)
+                const skill_status = await Use_Skill(skill_sel[1], target, current, queue_battle, effect_list)
                 event_logger += skill_status
             }
             /*if (current+1 < (alive_counter.friend + alive_counter.enemy)) {
@@ -445,38 +477,12 @@ export async function User_Attack(context: any) {
             }
             event_logger += `Поздравляем с победой, но впереди развилка, куда пойдем?`
         } else {
-            keyboard.callbackButton({ label: 'Возрождение', payload: { command: 'battle_init' }, color: 'secondary' })
+            keyboard.callbackButton({ label: 'Возрождение', payload: { command: 'user_lose', uid: 0 }, color: 'secondary' })
             event_logger += `Вы мертвы, Владыка демонов попробуйте снова!`
         }
     } else {
         keyboard.callbackButton({ label: 'Атака', payload: { command: 'user_attack', id_battle: id_battle }, color: 'secondary' })
     }
-    
-    /*if (turn) {Вы довольный победой прошли дальше, но здесь дальше 
-        player.health -= enemy.atk
-        event += `Вы нанесли  💥${player.atk}\n`
-        enemy.health -= player.atk
-        event += `Враг нанес  💥${enemy.atk}\n`
-    } else {
-        enemy.health -= player.atk
-        event += `Враг нанес  💥${enemy.atk}\n`
-        player.health -= enemy.atk
-        event += `Вы нанесли  💥${player.atk}\n`
-    }*/
-    
-    
-    /*if (player.health <= 0 || enemy.health <= 0) {
-        if (player.health <= 0 ) {
-            event += `Вы умерли 💥${player.name} Попробуйте снова, владыка демонов!\n`
-            keyboard.callbackButton({ label: 'Возродиться', payload: { command: 'user_revival', player, enemy, turn }, color: 'secondary' })
-        }
-        if (enemy.health <= 0) {
-            event += `Вы одежрали победу над 💥${enemy.name}. Поздравляем!\n`
-            keyboard.callbackButton({ label: 'Победа Нафиг', payload: { command: 'user_win', player, enemy, turn }, color: 'secondary' })
-        }
-    } else {
-        keyboard.callbackButton({ label: 'Атака', payload: { command: 'user_attack', player, enemy, turn }, color: 'secondary' })
-    }*/
     for (let i in queue_battle) {
         if (queue_battle[i].health > 0)
         event_logger += await User_Print(queue_battle[i])
@@ -497,6 +503,16 @@ export async function User_Win(context: any) {
     
     const keyboard = new KeyboardBuilder()
     .callbackButton({ label: 'Осмотреться', payload: { command: 'battle_init' }, color: 'secondary' })
+    keyboard.inline().oneTime()        
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
+}
+export async function User_Lose(context: any) {
+    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+    const uid = context.eventPayload.uid
+    const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: uid }})
+    let event_logger = 'Вы воскресле у жертвенника при входе в порталы!' 
+    const keyboard = new KeyboardBuilder()
+    .callbackButton({ label: 'МММ', payload: { command: 'user_win', uid: uid }, color: 'secondary' })
     keyboard.inline().oneTime()        
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
 }
