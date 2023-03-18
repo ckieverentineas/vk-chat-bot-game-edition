@@ -25,20 +25,42 @@ model Location {
   id     Int      @id @default(autoincrement())
   name   String   @unique
   Region Region[]
+  Mob    Mob[]
 }
 
 model Region {
   id          Int      @id @default(autoincrement())
   id_location Int
-  uid         Int @unique
-  road      String
+  uid         Int      @unique
+  road        String
   label       String
   name        String
   mob_min     Int
   mob_max     Int
+  boss Int
   location    Location @relation(fields: [id_location], references: [id], onDelete: Cascade, onUpdate: Cascade)
   Input       Road[]   @relation("Input")
   Output      Road[]   @relation("Output")
+}
+
+model Classify {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+  Mob  Mob[]
+}
+
+model Mob {
+  id          Int      @id @default(autoincrement())
+  id_location Int
+  id_classify Int
+  name        String   @unique
+  atk         Int
+  health      Int
+  health_max  Int
+  mana        Int
+  skill       String
+  location    Location @relation(fields: [id_location], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  classify    Classify @relation(fields: [id_classify], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model Road {
