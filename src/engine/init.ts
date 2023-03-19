@@ -22,7 +22,7 @@ export function InitGameRoutes(hearManager: HearManager<IQuestionMessageContext>
 			},
 			{
 				region: [
-					{ uid: 1, uid_dead: 0, road: [{ uid: 2 }, { uid: 3 }], label: `${location[1]}`, name: "Поляна слизней", mob_min: 1, mob_max: 1, boss: 0 },
+					{ uid: 1, uid_dead: 0, road: [{ uid: 2 }, { uid: 3 }], label: `${location[1]}`, name: "Памятник развлечениям", mob_min: 1, mob_max: 1, boss: 0 },
 					{ uid: 2, uid_dead: 0, road: [{ uid: 4 }, { uid: 5 }], label: "Налево", name: "Турники", mob_min: 1, mob_max: 2, boss: 0 },
 					{ uid: 3, uid_dead: 0, road: [{ uid: 4 }, { uid: 5 }], label: "Направо", name: "Круг обозрения", mob_min: 2, mob_max: 2, boss: 0 },
 					{ uid: 4, uid_dead: 0, road: [{ uid: 6 }], label: "Налево", name: "Левое крыло", mob_min: 2, mob_max: 3, boss: 0 },
@@ -33,7 +33,7 @@ export function InitGameRoutes(hearManager: HearManager<IQuestionMessageContext>
 			},
 			{
 				region: [
-					{ uid: 7, uid_dead: 0, road: [{ uid: 8 }, { uid: 9 }], label: `${location[2]}`, name: "Повсюду пчёлы, вероятно это уже улий, а не магаз..", mob_min: 1, mob_max: 1, boss: 0 },
+					{ uid: 7, uid_dead: 0, road: [{ uid: 8 }, { uid: 9 }], label: `${location[2]}`, name: "Центральный отдел", mob_min: 1, mob_max: 1, boss: 0 },
 					{ uid: 8, uid_dead: 0, road: [{ uid: 10 }, { uid: 11 }], label: "Вниз", name: "Подвал", mob_min: 1, mob_max: 2, boss: 0 },
 					{ uid: 9, uid_dead: 0, road: [{ uid: 10 }, { uid: 11 }], label: "Вверх", name: "Лестница на крышу", mob_min: 2, mob_max: 2, boss: 0 },
 					{ uid: 10, uid_dead: 0, road: [{ uid: 12 }], label: "Вверх", name: "Дыра в потолке", mob_min: 2, mob_max: 3, boss: 0 },
@@ -44,7 +44,7 @@ export function InitGameRoutes(hearManager: HearManager<IQuestionMessageContext>
 			},
 			{
 				region: [
-					{ uid: 13, uid_dead: 0, road: [{ uid: 14 }, { uid: 15 }], label: `${location[3]}`, name: "Гнездо крыс", mob_min: 1, mob_max: 1, boss: 0 },
+					{ uid: 13, uid_dead: 0, road: [{ uid: 14 }, { uid: 15 }], label: `${location[3]}`, name: "Станция метро", mob_min: 1, mob_max: 1, boss: 0 },
 					{ uid: 14, uid_dead: 0, road: [{ uid: 16 }, { uid: 17 }], label: "Влево", name: "Проход с разбитым электропоездом", mob_min: 1, mob_max: 2, boss: 0 },
 					{ uid: 15, uid_dead: 0, road: [{ uid: 16 }, { uid: 17 }], label: "Вправо", name: "Заваленный проход", mob_min: 2, mob_max: 2, boss: 0 },
 					{ uid: 16, uid_dead: 0, road: [{ uid: 18 }], label: "Влево", name: "Провал под электропоездом", mob_min: 2, mob_max: 3, boss: 0 },
@@ -74,22 +74,22 @@ export function InitGameRoutes(hearManager: HearManager<IQuestionMessageContext>
 		const creature: any = [
 			{
 				mob: [
-					{ name: "Слизь", team: 'enemy', xp: 1, atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'], target_classify: classify[0] },
-					{ name: "Слизень Босс", team: 'enemy', xp: 3, atk: 2, health: 8, health_max: 8, mana: 2, skill: ['Атака', 'Призыв обычных слизней'], target_classify: classify[1] }
+					{ name: "Слизь", team: 'enemy', xp: 1, atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'], target_classify: classify[1] },
+					{ name: "Слизень Босс", team: 'enemy', xp: 3, atk: 2, health: 8, health_max: 8, mana: 2, skill: ['Атака', 'Призыв обычных слизней'], target_classify: classify[2] }
 				],
 				target: location[1] 
 			}, 
 			{
 				mob: [
-					{ name: "Пчела", team: 'enemy', xp: 1, atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Атака'], target_classify: classify[0] },
-					{ name: "Пчела Босс", team: 'enemy', xp: 3, atk: 3, health: 6, health_max: 6, mana: 2, skill: ['Атака', 'Медовое исцеление'], target_classify: classify[1] },
+					{ name: "Пчела", team: 'enemy', xp: 1, atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Атака'], target_classify: classify[1] },
+					{ name: "Пчела Босс", team: 'enemy', xp: 3, atk: 3, health: 6, health_max: 6, mana: 2, skill: ['Атака', 'Медовое исцеление'], target_classify: classify[2] },
 				],
 				target: location[2]
 			}, 
 			{
 				mob: [
-					{ name: "Мышь Черная", team: 'enemy', xp: 1, atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Атака'], target_classify: classify[0] },
-					{ name: "Мышь Серая", team: 'enemy', xp: 3, atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'], target_classify: classify[0] }
+					{ name: "Мышь Черная", team: 'enemy', xp: 1, atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Атака'], target_classify: classify[1] },
+					{ name: "Мышь Серая", team: 'enemy', xp: 3, atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'], target_classify: classify[1] }
 				],
 				target: location[3]
 			}

@@ -228,40 +228,46 @@ async function Skill_Honey_Healing(skill:any, target: any, current: any, queue_b
 }
         
         
-export async function Battle_Init(context: any) {
+export async function Battle_Event(context: any) {
     //Стадия подготовки данных к битве
-    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
-    const creature: any = {
-        "Парк": [
-            { name: "Слизь", type: "bot", team: 'enemy', atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'] },
-            { name: "Слизень Босс", type: "boss", team: 'enemy', atk: 2, health: 8, health_max: 8, mana: 2, skill: ['Атака', 'Призыв обычных слизней'] }
-        ], 
-        "Магазин": [
-            { name: "Пчела", type: "bot", team: 'enemy', atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Атака'] },
-            { name: "Пчела Босс", type: "boss", team: 'enemy', atk: 3, health: 6, health_max: 6, mana: 2, skill: ['Атака', 'Медовое исцеление'] },
-        ], 
-        "Метро": [
-            { name: "Мышь Черная", type: "bot", team: 'enemy', atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Атака'] },
-            { name: "Мышь Серая", type: "bot", team: 'enemy', atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'] }
-        ],
-        "Игрок": [{ name: `${user?.name}`, type: "player", 'team': 'friend', atk: `${user?.atk}`, health: `${user?.hp}`, health_max: `${user?.hp}`, mana: `${user?.mana}`, skill: ['Атака', 'Призыв обычных слизней', 'Медовое исцеление'] }]
-    }
-    const queue_battle: any = []
+    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId }, include: { classify: true } })
+    const region: any = await prisma.region.findFirst({ where: { uid: user.id_region }, include: { location: true, }})
     const effect_list: any = []
     //Стадия инициализации мобов и игрока
-    const region: any = await prisma.region.findFirst({where: { uid: user.id_region }, include: { location: true}})
-    console.log("🚀 ~ file: contoller.ts:385 ~ Battle_Init ~ region:", region)
-    const enemy_will: any = (region.mob_min == region.mob_max) ? region.mob_min : randomInt(region.mob_min, region.mob_max)
-    let player_turn = false
-    for (let i=0; i < enemy_will+1; i++) {
-        const koef = randomInt(0, 100)
-        if ((koef > 50 && !player_turn) || (!player_turn && i == enemy_will+1)) {
-            player_turn = true
-            queue_battle.push(creature["Игрок"][randomInt(0, creature["Игрок"].length)])
-        } else {
-            queue_battle.push(creature[region.location.name][randomInt(0, creature[region.location.name]?.length)])
+    const mob_sel: any = await prisma.mob.findMany({ where: { id_location: region.location.id }, include: { classify: true }})
+    const creature: any = { mob: [], boss: [] }
+    for (const i in mob_sel) {
+        if (mob_sel[i].classify.name == 'моб') {
+            creature.mob.push({ classify: mob_sel[i].classify.name, xp: mob_sel[i].xp, name: mob_sel[i].name, atk: mob_sel[i].atk, health: mob_sel[i].health, health_max: mob_sel[i].health_max, mana: mob_sel[i].mana, skill: mob_sel[i].skill })
+        }
+        if (mob_sel[i].classify.name == 'босс') {
+            creature.mob.push({ classify: mob_sel[i].classify.name, xp: mob_sel[i].xp, name: mob_sel[i].name, atk: mob_sel[i].atk, health: mob_sel[i].health, health_max: mob_sel[i].health_max, mana: mob_sel[i].mana, skill: mob_sel[i].skill })
         }
     }
+    const queue_battle_init: any = []
+    queue_battle_init.push({ classify: user.classify.name, xp: user.xp, name: user.name, atk: user.atk, health: user.health, health_max: user.health_max, mana: user.mana, skill: user.skill })
+    const enemy_will: any = (region.mob_min == region.mob_max) ? region.mob_min : randomInt(region.mob_min, region.mob_max)
+    for (let i=0; i < enemy_will; i++) {
+        queue_battle_init.push(creature.mob[randomInt(0, creature.mob.length)])
+    }
+    for (let i=0; i < region.boss; i++) {
+        queue_battle_init.push(creature.boss[randomInt(0, creature.mob.length)])
+    }
+    const queue_battle: any = []
+    console.log("🚀 ~ file: contoller.ts:252 ~ Battle_Event ~ queue_battle_init:", queue_battle_init)
+    while (queue_battle_init.length > 0) {
+        const ranger = queue_battle_init.length*50
+        const selector = randomInt(0, ranger)
+        let counter = 0
+        for (let i=0; i < ranger; i+=50) {
+            if (i >= selector && selector < i+50) {
+                queue_battle.push(queue_battle_init[counter])
+                queue_battle_init.splice(counter, 1);
+            }
+            counter++
+        }
+    }
+    console.log("🚀 ~ file: contoller.ts:257 ~ Battle_Event ~ queue_battle:", queue_battle)
     //cтатус бары
     let event_logger = '' 
     for (let i in queue_battle) {
@@ -407,7 +413,7 @@ export async function Controller_Portal(context: any) {
     }
     event_logger += `Куда пойдем?\n`
     for (const i in region_next) {
-        event_logger += `${region_next[i].label} - ${region_next[i].name}\n`
+        //event_logger += `${region_next[i].label} - ${region_next[i].name}\n`
         keyboard.callbackButton({ label: region_next[i].label, payload: { command: 'controller_event', uid: region_next[i].uid }, color: 'secondary' }).row()
     }
     const region_sel: any = await prisma.region.findFirst({where: { uid: user.id_region }, include: { location: true}})
@@ -423,7 +429,12 @@ export async function Controller_Event(context: any) {
     const region: any = await prisma.region.findFirst({where: { uid: user_location.id_region }, include: { location: true}})
     event_logger += `${await User_Print(user)}\n🌐:${region.location.name}-${region.name}\n`
     const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: 'Осмотреться', payload: { command: 'battle_init' }, color: 'secondary' })
+    if (region.mob_min > 0 || region.boss > 0) {
+        keyboard.callbackButton({ label: 'Осмотреться', payload: { command: 'battle_event' }, color: 'secondary' })
+    } else {
+        keyboard.callbackButton({ label: 'Вперед', payload: { command: 'controller_portal' }, color: 'secondary' })
+    }
+    
     keyboard.inline().oneTime()        
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
 }

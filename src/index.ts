@@ -12,7 +12,7 @@ import { send } from 'process';
 import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 import { env } from 'process';
 import prisma from './engine/events/module/prisma_client';
-import { Battle_Init, Controller_Event, Controller_Portal, User_Add_Stat, User_Attack, User_Info, User_Lose, User_Nickname, User_Nickname_Select, User_Win } from './engine/events/contoller';
+import { Battle_Event, Controller_Event, Controller_Portal, User_Add_Stat, User_Attack, User_Info, User_Lose, User_Nickname, User_Nickname_Select, User_Win } from './engine/events/contoller';
 import { User } from '@prisma/client';
 dotenv.config()
 
@@ -77,11 +77,10 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 		}
 		const user_creation: User = await prisma.user.create({ data: {idvk: context.senderId, skill: JSON.stringify(["Атака"]) }})
 		//приветствие игрока
-		const visit = await context.question(`⌛ Вы смотрели телик, как вдруг по всем каналам стали показывать, что повсюду стали открываться порталы, что они нам принесут, никто не знает, но народ уже пачками в них попер, а вы что?`,
+		const visit = await context.send(`⌛ Вы смотрели телик, как вдруг по всем каналам стали показывать, что повсюду стали открываться порталы, что они нам принесут, никто не знает, но народ уже пачками в них попер, а вы что?`,
 			{ 	
 				keyboard: Keyboard.builder()
-				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'user_info' }, color: 'positive' }).oneTime().inline(),
-				answerTimeLimit
+				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'user_info' }, color: 'positive' }).oneTime().inline()
 			}
 		);
 		if (visit.isTimeout) { return await context.send(`⏰ Время ожидания активности истекло!`) }
@@ -89,8 +88,7 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 		const visit = await context.send(`⌛ Погода сегодня солнечная, идти фармить?`,
 			{ 	
 				keyboard: Keyboard.builder()
-				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_portal' }, color: 'positive' }).oneTime().inline(),
-				answerTimeLimit
+				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_portal' }, color: 'positive' }).oneTime().inline()
 			}
 		);
 	}
@@ -106,7 +104,7 @@ vk.updates.on('message_event', async (context: any, next: any) => {
 		"user_add_stat": User_Add_Stat, //прокачка статов
 		"user_nickname": User_Nickname,
 		"user_nickname_select": User_Nickname_Select,
-		"battle_init": Battle_Init,
+		"battle_event": Battle_Event,
 		"user_attack": User_Attack,
 		"user_win": User_Win,
 		"user_lose": User_Lose,
