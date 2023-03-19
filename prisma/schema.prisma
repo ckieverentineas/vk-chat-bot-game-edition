@@ -20,7 +20,7 @@ model User {
   mana        Int      @default(0)
   point       Int      @default(2)
   id_region   Int      @default(0)
-  skill String
+  skill       String
   crdate      DateTime @default(now())
   Battle      Battle[]
   classify    Classify @relation(fields: [id_classify], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -74,5 +74,8 @@ model Battle {
   id_user      Int    @unique
   queue_battle String
   effect_list  String
+  queue_dead   String
+  turn         Int
+  target       Int
   user         User   @relation(fields: [id_user], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }

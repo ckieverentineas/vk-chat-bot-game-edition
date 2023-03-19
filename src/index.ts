@@ -12,7 +12,7 @@ import { send } from 'process';
 import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 import { env } from 'process';
 import prisma from './engine/events/module/prisma_client';
-import { Battle_Event, Controller_Event, Controller_Portal, User_Add_Stat, User_Attack, User_Info, User_Lose, User_Nickname, User_Nickname_Select, User_Win } from './engine/events/contoller';
+import { Battle_Engine, Battle_Event, Controller_Event, Controller_Portal, Controller_Portal_Dead, User_Add_Stat, User_Info, User_Lose, User_Nickname, User_Nickname_Select, User_Win } from './engine/events/contoller';
 import { User } from '@prisma/client';
 dotenv.config()
 
@@ -99,13 +99,14 @@ vk.updates.on('message_event', async (context: any, next: any) => {
 	console.log(`${context.eventPayload.command} > ${user.id_region}`)
 	const config: any = {
 		"controller_portal": Controller_Portal, //управление порталами
+		"controller_portal_dead": Controller_Portal_Dead,
 		"controller_event": Controller_Event, //Меню событий
 		"user_info": User_Info, //статы юзера
 		"user_add_stat": User_Add_Stat, //прокачка статов
 		"user_nickname": User_Nickname,
 		"user_nickname_select": User_Nickname_Select,
 		"battle_event": Battle_Event,
-		"user_attack": User_Attack,
+		"battle_engine": Battle_Engine,
 		"user_win": User_Win,
 		"user_lose": User_Lose,
 	}
