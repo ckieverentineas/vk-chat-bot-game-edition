@@ -11,182 +11,50 @@ function Sleep(ms: number) {
     });
 }
 
-export async function Main_Menu_Init(context: any) {
-    //const attached = await Image_Random(context, "bank")
-    //const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Войти в портал:`, keyboard: await Main_Menu(context)/*, attachment: attached.toString()*/ })
-}
-export async function Main_Menu(context: any) {
-    const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: 'Магазин', payload: { command: 'portal_shop', location: 'Магазин' }, color: 'secondary' })
-    .callbackButton({ label: 'Метро', payload: { command: 'portal_underground', location: 'Метро' }, color: 'secondary' }).row()
-    .callbackButton({ label: 'Парк', payload: { command: 'portal_park', location: 'Парк' }, color: 'secondary' }).inline().oneTime()
-    return keyboard
-}
-
-export async function Portal_Shop(context: any) {
-    //const attached = await Image_Random(context, "bank")
-    const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
-    if (user) {
-        const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: 7 }})
-    }
-    const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: 'Далее', payload: { command: 'user_info' }, color: 'secondary' })
-    .callbackButton({ label: 'Назад', payload: { command: 'system_call' }, color: 'secondary' }).inline().oneTime()
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Как оказалось, данный портал ведёт в гнездо крыс`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-}
-
-export async function Portal_Underground(context: any) {
-    //const attached = await Image_Random(context, "bank")
-    const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
-    if (user) {
-        const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: 13 }})
-    }
-    const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: 'Далее', payload: { command: 'user_info' }, color: 'secondary' })
-    .callbackButton({ label: 'Назад', payload: { command: 'system_call' }, color: 'secondary' }).inline().oneTime()
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Вы попали на поляну слизней`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-}
-
-export async function Portal_Park(context: any) {
-    //const attached = await Image_Random(context, "bank")
-    const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
-    if (user) {
-        const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: 1 }})
-    }
-    const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: 'Далее', payload: { command: 'user_info' }, color: 'secondary' })
-    .callbackButton({ label: 'Назад', payload: { command: 'system_call' }, color: 'secondary' }).inline().oneTime()
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Повсюду пчёлы, вероятно это улей`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-}
-
 export async function User_Info(context: any) {
     //const attached = await Image_Random(context, "bank")
     const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
     const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: '+⚔-⭐', payload: { command: 'user_add_attack' }, color: 'secondary' })
-    .callbackButton({ label: '+❤-⭐', payload: { command: 'user_add_health' }, color: 'secondary' }).row()
-    .callbackButton({ label: '+🌀-⭐', payload: { command: 'user_add_mana' }, color: 'secondary' })
-    if (user && user.point <= 0) { keyboard.callbackButton({ label: 'Дальше', payload: { command: 'user_nickname' }, color: 'secondary' })}
+    let event_logger = ''
+    if (user && user.point <= 0) {
+        event_logger += 'Ваши характеристики:'
+        keyboard.callbackButton({ label: 'Дальше', payload: { command: 'user_nickname' }, color: 'secondary' })
+    } else {
+        event_logger += 'Распределите характеристики:'
+        keyboard.callbackButton({ label: '+⚔-⭐', payload: { command: 'user_add_stat', stat: "atk" }, color: 'secondary' })
+        .callbackButton({ label: '+❤-⭐', payload: { command: 'user_add_stat', stat: "health"  }, color: 'secondary' }).row()
+        .callbackButton({ label: '+🌀-⭐', payload: { command: 'user_add_stat', stat: "mana" }, color: 'secondary' })
+    }
     keyboard.inline().oneTime()        
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `Распределите характеристики:\n⚔Атака: ${user?.atk}\n❤Здоровье: ${user?.hp}\n🌀Мана: ${user?.mana}\n⭐Очки: ${user?.point}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `\n⚔Атака: ${user?.atk}\n❤Здоровье: ${user?.health_max}\n🌀Мана: ${user?.mana}\n⭐Очки: ${user?.point}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
 }
-export async function User_Add_Attack(context: any) {
-    //const attached = await Image_Random(context, "bank")
+export async function User_Add_Stat(context: any) {
+    const stat_sel = context.eventPayload.stat
     const user: User | null | undefined = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+    console.log("🚀 ~ file: contoller.ts:34 ~ User_Add_Stat ~ user:", user)
+    const keyboard = new KeyboardBuilder()
+    let event_logger = ''
     if (user && user.point > 0) {
-        const user_add_attack = await prisma.user.update({ where: { id: user.id }, data: { atk: { increment: 1 }, point: { decrement: 1 } } })
-        if (user_add_attack) {
-            const keyboard = new KeyboardBuilder()
-            .callbackButton({ label: '+⚔-⭐', payload: { command: 'user_add_attack' }, color: 'secondary' })
-            .callbackButton({ label: '+❤-⭐', payload: { command: 'user_add_health' }, color: 'secondary' }).row()
-            .callbackButton({ label: '+🌀-⭐', payload: { command: 'user_add_mana' }, color: 'secondary' })
-            if (user_add_attack.point <= 0) { keyboard.callbackButton({ label: 'Дальше', payload: { command: 'user_nickname' }, color: 'secondary' })}
-            keyboard.inline().oneTime()
-            await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `⚔Атака: ${user_add_attack?.atk}\n❤Здоровье: ${user_add_attack?.hp}\n🌀Мана: ${user_add_attack?.mana}\n⭐Очки: ${user_add_attack?.point}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-            await vk.api.messages.sendMessageEventAnswer({
-                event_id: context.eventId,
-                user_id: context.userId,
-                peer_id: context.peerId,
-                event_data: JSON.stringify({
-                    type: "show_snackbar",
-                    text: `🔔 Повышение ⚔Атака с ${user.atk} до ${user_add_attack.atk}`
-                })
-            })    
-            return
+        if (stat_sel == 'atk') {
+            const user_add_attack = await prisma.user.update({ where: { id: user.id }, data: { atk: { increment: 1 }, point: { decrement: 1 } } })
+            event_logger += `🔔 Повышена ⚔Атака с ${user.atk} до ${user_add_attack.atk}`
         }
-    }
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: `🔔 Повышение ⚔Атаки невозможно`
-        })
-    })  
-}
-
-export async function User_Add_Health(context: any) {
-    //const attached = await Image_Random(context, "bank")
-    const user: User | null | undefined = await prisma.user.findFirst({ where: { idvk: context.peerId } })
-    if (user && user.point > 0) {
-        const user_add_attack = await prisma.user.update({ where: { id: user.id }, data: { hp: { increment: 2 }, point: { decrement: 1 } } })
-        if (user_add_attack) {
-            const keyboard = new KeyboardBuilder()
-            .callbackButton({ label: '+⚔-⭐', payload: { command: 'user_add_attack' }, color: 'secondary' })
-            .callbackButton({ label: '+❤-⭐', payload: { command: 'user_add_health' }, color: 'secondary' }).row()
-            .callbackButton({ label: '+🌀-⭐', payload: { command: 'user_add_mana' }, color: 'secondary' })
-            if (user_add_attack.point <= 0) { keyboard.callbackButton({ label: 'Дальше', payload: { command: 'user_nickname' }, color: 'secondary' })}
-            keyboard.inline().oneTime()
-            await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `⚔Атака: ${user_add_attack?.atk}\n❤Здоровье: ${user_add_attack?.hp}\n🌀Мана: ${user_add_attack?.mana}\n⭐Очки: ${user_add_attack?.point}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-            await vk.api.messages.sendMessageEventAnswer({
-                event_id: context.eventId,
-                user_id: context.userId,
-                peer_id: context.peerId,
-                event_data: JSON.stringify({
-                    type: "show_snackbar",
-                    text: `🔔 Повышение ❤Здоровья с ${user.hp} до ${user_add_attack.hp}`
-                })
-            })    
-            return
+        if (stat_sel == 'health') {
+            const user_add_health = await prisma.user.update({ where: { id: user.id }, data: { health: { increment: 2 }, health_max: { increment: 2 }, point: { decrement: 1 } } })
+            event_logger += `🔔 Повышено ❤Здоровье с ${user.health_max} до ${user_add_health.health_max}`
         }
-    }
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: `🔔 Повышение ❤Здоровья невозможно`
-        })
-    })  
-}
-
-export async function User_Add_Mana(context: any) {
-    //const attached = await Image_Random(context, "bank")
-    const user: User | null | undefined = await prisma.user.findFirst({ where: { idvk: context.peerId } })
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: `🔔 У тебя даже навыков нет, зачем тебе мана? Подумай ещё`
-        })
-    })  
-    return
-    if (user && user.point > 0) {
-        const user_add_attack = await prisma.user.update({ where: { id: user.id }, data: { hp: { increment: 2 }, point: { decrement: 1 } } })
-        if (user_add_attack) {
-            const keyboard = new KeyboardBuilder()
-            .callbackButton({ label: '+⚔-⭐', payload: { command: 'user_add_attack' }, color: 'secondary' })
-            .callbackButton({ label: '+❤-⭐', payload: { command: 'user_add_health' }, color: 'secondary' })
-            .callbackButton({ label: '+🌀-⭐', payload: { command: 'user_add_mana' }, color: 'secondary' })
-            if (user_add_attack.point <= 0) { keyboard.callbackButton({ label: 'Дальше', payload: { command: 'user_nickname' }, color: 'secondary' })}
-            keyboard.inline().oneTime()
-            await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `⚔Атака: ${user_add_attack?.atk}\n❤Здоровье: ${user_add_attack?.hp}\n🌀Мана: ${user_add_attack?.mana}\n⭐Очки: ${user_add_attack?.point}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-            await vk.api.messages.sendMessageEventAnswer({
-                event_id: context.eventId,
-                user_id: context.userId,
-                peer_id: context.peerId,
-                event_data: JSON.stringify({
-                    type: "show_snackbar",
-                    text: `🔔 Повышение 🌀Маны с ${user.mana} до ${user_add_attack.mana}`
-                })
-            })    
-            return
+        if (stat_sel == 'mana') {
+            const user_skill = JSON.parse(user.skill)
+            if (user_skill.length <= 0) {
+                const user_add_mana = await prisma.user.update({ where: { id: user.id }, data: { mana: { increment: 1 }, point: { decrement: 1 } } })
+                event_logger += `🔔 Повышена 🌀Мана с ${user.mana} до ${user_add_mana.mana}`
+            }
+            event_logger += `🔔 У тебя даже навыков нет, зачем тебе мана? Подумай ещё`
         }
+        keyboard.callbackButton({ label: 'Дальше', payload: { command: 'user_info' }, color: 'secondary' }).inline().oneTime()
+        await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
     }
-    await vk.api.messages.sendMessageEventAnswer({
-        event_id: context.eventId,
-        user_id: context.userId,
-        peer_id: context.peerId,
-        event_data: JSON.stringify({
-            type: "show_snackbar",
-            text: `🔔 Повышение 🌀Маны невозможно`
-        })
-    })  
+    await vk.api.messages.sendMessageEventAnswer({ event_id: context.eventId, user_id: context.userId, peer_id: context.peerId, event_data: JSON.stringify({ type: "show_snackbar", text: `🔔 Повышение cтатов невозможно` }) })  
 }
 
 async function User_Generate_Nickname(length: number) {
@@ -217,7 +85,7 @@ export async function User_Nickname_Select(context: any) {
     //const attached = await Image_Random(context, "bank")
     const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
     const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: 'Осмотреться', payload: { command: 'battle_init' }, color: 'secondary' })
+    .callbackButton({ label: 'Осмотреться', payload: { command: 'controller_portal' }, color: 'secondary' })
     keyboard.inline().oneTime() 
     if (user) {
         if (context.eventPayload.name) {
@@ -239,7 +107,7 @@ export async function User_Nickname_Select(context: any) {
 
 async function User_Print(user: any) {
     const bar_current = user.health/user.health_max
-    const smile = user.type == "player" ? "👤" : "🤖"
+    const smile = user.id_classify == 1 ? "👤" : "🤖"
     let bar = ''
     for (let i = 0; i <= 1; i += 0.1) {
         bar += (i < bar_current) ? '🟥' : '◻'
@@ -513,6 +381,49 @@ export async function User_Lose(context: any) {
     let event_logger = 'Вы воскресле у жертвенника при входе в порталы!' 
     const keyboard = new KeyboardBuilder()
     .callbackButton({ label: 'МММ', payload: { command: 'user_win', uid: uid }, color: 'secondary' })
+    keyboard.inline().oneTime()        
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
+}
+export async function Controller_Portal_Dead(context: any) {
+    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+    const find_start_portal: any = await prisma.region.findFirst({ where: { uid: user.id_region } })
+    const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: find_start_portal.uid_dead }})
+    let event_logger = 'Вы воскресле у жертвенника при входе в порталы!' 
+    const keyboard = new KeyboardBuilder()
+    .callbackButton({ label: 'Возродиться', payload: { command: 'controller_portal' }, color: 'secondary' })
+    keyboard.inline().oneTime()        
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
+}
+export async function Controller_Portal(context: any) {
+    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+    const region: any = await prisma.region.findFirst({where: { uid: user.id_region }})
+    const region_next: any = []
+    const region_current = JSON.parse(region.road)
+    let event_logger = ''
+    const keyboard = new KeyboardBuilder()
+    for (const i in region_current) {
+        const region_temp = await prisma.region.findFirst({ where: { uid: region_current[i].uid } })
+        region_next.push(region_temp)
+    }
+    event_logger += `Куда пойдем?\n`
+    for (const i in region_next) {
+        event_logger += `${region_next[i].label} - ${region_next[i].name}\n`
+        keyboard.callbackButton({ label: region_next[i].label, payload: { command: 'controller_event', uid: region_next[i].uid }, color: 'secondary' }).row()
+    }
+    const region_sel: any = await prisma.region.findFirst({where: { uid: user.id_region }, include: { location: true}})
+    event_logger += `${await User_Print(user)}\n🌐:${region_sel.location.name}-${region_sel.name}\n`
+    keyboard.inline().oneTime()  
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
+}
+export async function Controller_Event(context: any) {
+    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+    const uid = context?.eventPayload?.uid ? context.eventPayload.uid : user.uid
+    const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: uid }})
+    let event_logger = '' 
+    const region: any = await prisma.region.findFirst({where: { uid: user_location.id_region }, include: { location: true}})
+    event_logger += `${await User_Print(user)}\n🌐:${region.location.name}-${region.name}\n`
+    const keyboard = new KeyboardBuilder()
+    .callbackButton({ label: 'Осмотреться', payload: { command: 'battle_init' }, color: 'secondary' })
     keyboard.inline().oneTime()        
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
 }

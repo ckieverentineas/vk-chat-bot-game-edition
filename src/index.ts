@@ -12,7 +12,7 @@ import { send } from 'process';
 import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 import { env } from 'process';
 import prisma from './engine/events/module/prisma_client';
-import { Battle_Init, Main_Menu_Init, Portal_Park, Portal_Shop, Portal_Underground, User_Add_Attack, User_Add_Health, User_Add_Mana, User_Attack, User_Info, User_Lose, User_Nickname, User_Nickname_Select, User_Win } from './engine/events/contoller';
+import { Battle_Init, Controller_Event, Controller_Portal, User_Add_Stat, User_Attack, User_Info, User_Lose, User_Nickname, User_Nickname_Select, User_Win } from './engine/events/contoller';
 import { User } from '@prisma/client';
 dotenv.config()
 
@@ -75,12 +75,12 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 			await context.send('⌛ Вы отказались дать свое согласие!');
 			return;
 		}
-		const user_creation: User = await prisma.user.create({data: {idvk: context.senderId}})
+		const user_creation: User = await prisma.user.create({ data: {idvk: context.senderId, skill: JSON.stringify(["Атака"]) }})
 		//приветствие игрока
 		const visit = await context.question(`⌛ Вы смотрели телик, как вдруг по всем каналам стали показывать, что повсюду стали открываться порталы, что они нам принесут, никто не знает, но народ уже пачками в них попер, а вы что?`,
 			{ 	
 				keyboard: Keyboard.builder()
-				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'system_call' }, color: 'positive' }).oneTime().inline(),
+				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'user_info' }, color: 'positive' }).oneTime().inline(),
 				answerTimeLimit
 			}
 		);
@@ -89,7 +89,7 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 		const visit = await context.send(`⌛ Погода сегодня солнечная, идти фармить?`,
 			{ 	
 				keyboard: Keyboard.builder()
-				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'battle_init' }, color: 'positive' }).oneTime().inline(),
+				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_portal' }, color: 'positive' }).oneTime().inline(),
 				answerTimeLimit
 			}
 		);
@@ -100,14 +100,10 @@ vk.updates.on('message_event', async (context: any, next: any) => {
 	const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
 	console.log(`${context.eventPayload.command} > ${user.id_region}`)
 	const config: any = {
-		"system_call": Main_Menu_Init,
-		"portal_shop": Portal_Shop,
-		"portal_underground": Portal_Underground,
-		"portal_park": Portal_Park,
-		"user_info": User_Info,
-		"user_add_attack": User_Add_Attack,
-		"user_add_health": User_Add_Health,
-		"user_add_mana": User_Add_Mana,
+		"controller_portal": Controller_Portal, //управление порталами
+		"controller_event": Controller_Event, //Меню событий
+		"user_info": User_Info, //статы юзера
+		"user_add_stat": User_Add_Stat, //прокачка статов
 		"user_nickname": User_Nickname,
 		"user_nickname_select": User_Nickname_Select,
 		"battle_init": Battle_Init,
