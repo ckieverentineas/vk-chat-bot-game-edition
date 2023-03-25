@@ -295,7 +295,8 @@ export async function Battle_Turn_Player_Ready(context: any) {
     for (const i in skill_sel) {
         keyboard.callbackButton({ label: skill_sel[i], payload: { command: 'battle_turn_player', skill_name: skill_sel[i] }, color: 'secondary' }).row()
     }
-    keyboard.callbackButton({ label: `Смена цели`, payload: { command: 'battle_turn_player_change_target' }, color: 'secondary' })
+    const alive_counter: any = await Counter_Enemy(context, queue_battle)
+    if (alive_counter.enemy > 1) { keyboard.callbackButton({ label: `Смена цели`, payload: { command: 'battle_turn_player_change_target' }, color: 'secondary' }) }
     event_logger += await Battle_Printer(context)
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard.inline().oneTime() /*, attachment: attached.toString()*/ })
 }
@@ -317,7 +318,25 @@ export async function Battle_Turn_Player(context: any) {
 }
 export async function Battle_Turn_Player_Change_Target(context: any) {
     let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
+    const id_target = context.eventPayload?.id_target || false
+    let event_logger = ``
+    const keyboard = new KeyboardBuilder()
+    if (!id_target) {
+        let event_logger = `Выберите цель:\n`
+        const target_sel = await Target(context, queue_battle, 'enemy')
+        for (const i in target_sel) {
+            keyboard.callbackButton({ label: `${Number(target_sel[i])+1}-${queue_battle[target_sel[i]].name}`, payload: { command: 'battle_turn_player_change_target', id_target: target_sel[i] }, color: 'secondary' }).row()
+        }
+    } else {
+        target = id_target
+        event_logger = `Установлена новая цель ${1+Number(target)}`
+        await Battle_Save(context, user, id_battle,queue_battle, queue_dead, effect_list, turn, target)
+        keyboard.callbackButton({ label: `Дальше`, payload: { command: 'battle_turn_player_ready' }, color: 'secondary' })
+    }
+    event_logger += await Battle_Printer(context)
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard.inline().oneTime() /*, attachment: attached.toString()*/ })
 }
+
 export async function Battle_Turn_Enemy(context: any) {
     console.log(`Turn enemy in battle for user ${context.peerId}`)
     let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
@@ -359,6 +378,12 @@ async function Battle_Printer(context: any) {
     for (let i in queue_battle) {
         if (queue_battle[i].health > 0) {
             event_logger += await User_Print(queue_battle[i])
+        }
+        if (turn == i) {
+            event_logger += `🎲`
+        }
+        if (target == i) {
+            event_logger += `🎯`
         }
     }
     return event_logger
