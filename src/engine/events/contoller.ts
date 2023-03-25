@@ -31,7 +31,6 @@ export async function User_Info(context: any) {
 export async function User_Add_Stat(context: any) {
     const stat_sel = context.eventPayload.stat
     const user: User | null | undefined = await prisma.user.findFirst({ where: { idvk: context.peerId } })
-    console.log("🚀 ~ file: contoller.ts:34 ~ User_Add_Stat ~ user:", user)
     const keyboard = new KeyboardBuilder()
     let event_logger = ''
     if (user && user.point > 0) {
@@ -116,7 +115,8 @@ async function User_Print(user: any) {
     return `\n${smile}: ${bar} [${(bar_current*100).toFixed(2)}%]\n ❤${user.health}/${user.health_max} ⚔${user.atk} 🌀${user.mana} [${user.name}]\n`
 }
 
-async function Counter_Enemy(queue_battle: any) {
+async function Counter_Enemy(context: any, queue_battle: any) {
+    console.log(`Counted enemy in battle for user ${context.peerId}`)
     //функция подсчета количества врагов и союзников
     const counter: any = { enemy: 0, friend: 0}
     const helper = ['enemy', 'friend']
@@ -168,7 +168,8 @@ async function Effect_Disorientation(id: any, effect_list: any, queue_battle: an
     return answer       
 }
 
-async function Target(queue_battle: any, type: any) {
+async function Target(context: any, queue_battle: any, type: any) {
+    console.log(`Reseach target by ${type} in battle for user ${context.peerId}`)
     //функция подсчета количества врагов и союзников
     const detected: any = { enemy: [], friend: []}
     const helper = ['enemy', 'friend']
@@ -180,12 +181,11 @@ async function Target(queue_battle: any, type: any) {
             }
         }
     } 
-    console.log("🚀 ~ file: contoller.ts:174 ~ Target ~ detected:", detected)
-    console.log("🚀 ~ file: contoller.ts:184 ~ Target ~ detected[`${type}`]:", detected[`${type}`])
     return detected[`${type}`]
 }
     
-async function Use_Skill(skill: any, target: any, current: any, queue_battle: any, effect_list: any) {
+async function Use_Skill(context: any, skill: any, target: any, current: any, queue_battle: any, effect_list: any) {
+    console.log(`Skill selected by ${queue_battle[current].team} in battle for user ${context.peerId}`)
     //контроллер скиллов в конфиге название в скиллах персонажей, а значение название функции скилла
     const config: any = {
         'Атака': Skill_Attack,
@@ -193,15 +193,16 @@ async function Use_Skill(skill: any, target: any, current: any, queue_battle: an
         'Медовое исцеление': Skill_Honey_Healing
     }
     try {
-        const res = config[skill](skill, target, current, queue_battle, effect_list)
+        const res = config[skill](context, skill, target, current, queue_battle, effect_list)
         return res
     } catch (e) {
         return e
     }
 }
-async function Skill_Attack(skill:any, target: any, current: any, queue_battle: any, effect_list: any) {
+async function Skill_Attack(context: any, skill:any, target: number, current: number, queue_battle: any, effect_list: any) {
+    console.log(`Skill attack by ${queue_battle[current].team} in battle for user ${context.peerId}`)
     queue_battle[target].health -= queue_battle[current].atk
-    let res = `🔪${queue_battle[current].name}>${skill}>${queue_battle[target].name}: 💥${queue_battle[current].atk}\n`
+    let res = `🔪${queue_battle[current].name} > ${skill} > ${queue_battle[target].name}: 💥${queue_battle[current].atk}\n`
     /*if (randomInt(1,100) < 50) {
         effect_list.push({'target': target, 'effect': 'Дезориентация', 'time': 1})
         res += `🌀${queue_battle[target].name}:Дезоринтация!\n`
@@ -264,7 +265,7 @@ export async function Battle_Event(context: any) {
         const  limiter = 50
         const ranger = queue_battle_init.length*limiter
         const selector = Math.ceil(randomInt(1, ranger)/limiter)-1
-        console.log(`${ranger} > ${selector} > ${queue_battle_init[selector].name}`)
+        //console.log(`${ranger} > ${selector} > ${queue_battle_init[selector].name}`)
         queue_battle.push(queue_battle_init[selector])
         queue_battle_init.splice(selector, 1);
     }
@@ -277,11 +278,64 @@ export async function Battle_Event(context: any) {
     const battle_init = await prisma.battle.upsert({ create: { id_user: user.id, queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list), queue_dead: JSON.stringify([]), turn: 0, target: 0 }, update: { id_user: user.id, queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list), queue_dead: JSON.stringify([]), turn: 0, target: 0 }, where: { id_user: user?.id }})
     
     const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: 'В бой!', payload: { command: 'battle_engine' }, color: 'secondary' })
+    queue_battle[0].classify == 'игрок' ? keyboard.callbackButton({ label: 'В бой!', payload: { command: 'battle_turn_player_ready' }, color: 'secondary' }) : keyboard.callbackButton({ label: 'В бой!', payload: { command: 'battle_turn_enemy' }, color: 'secondary' })
     keyboard.inline().oneTime()        
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${queue_battle[0].classify == 'игрок' ? "Вам повезло, вы первым заметили врага" : "Вы не заметили врага и он атаковал вас"}\n${event_logger}`, keyboard: keyboard/*, attachment: attached.toString()*/ })
 }
-export async function Battle_Engine(context: any) {
+export async function Battle_Turn_Player_Ready(context: any) { 
+    console.log(`Turn player init in battle for user ${context.peerId}`)
+    let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
+    let event_logger = `Ваш ход, что предпримете?\n`
+    //если ходит игрок
+    const skill_sel = JSON.parse(queue_battle[turn].skill)
+    const target_sel = await Target(context, queue_battle, 'enemy')
+    if (target_sel.includes(String(target))) { target = target } else { target = target_sel[randomInt(0, target_sel.length)] }
+    await Battle_Save(context, user, id_battle,queue_battle, queue_dead, effect_list, turn, target)
+    const keyboard = new KeyboardBuilder()
+    for (const i in skill_sel) {
+        keyboard.callbackButton({ label: skill_sel[i], payload: { command: 'battle_turn_player', skill_name: skill_sel[i] }, color: 'secondary' }).row()
+    }
+    keyboard.callbackButton({ label: `Смена цели`, payload: { command: 'battle_turn_player_change_target' }, color: 'secondary' })
+    event_logger += await Battle_Printer(context)
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard.inline().oneTime() /*, attachment: attached.toString()*/ })
+}
+    
+export async function Battle_Turn_Player(context: any) {
+    console.log(`Turn player in battle for user ${context.peerId}`)
+    let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
+    const skill_selected = context.eventPayload.skill_name
+    let event_logger = ''
+    //если ходит игрок
+    const skill_status = await Use_Skill(context, skill_selected, target, turn, queue_battle, effect_list)
+    event_logger += skill_status
+    await Battle_Save(context, user, id_battle,queue_battle, queue_dead, effect_list, turn, target)
+    await Battle_Clear(context)
+    const [event_logger_fin, keyboard]: any = await Battle_Detector(context)
+    event_logger += event_logger_fin
+    event_logger += await Battle_Printer(context)
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard.inline().oneTime() /*, attachment: attached.toString()*/ })
+}
+export async function Battle_Turn_Player_Change_Target(context: any) {
+    let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
+}
+export async function Battle_Turn_Enemy(context: any) {
+    console.log(`Turn enemy in battle for user ${context.peerId}`)
+    let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
+    let event_logger = ''
+    const alive_counter: any = await Counter_Enemy(context, queue_battle)
+    const targets = await Target(context, queue_battle, 'friend')
+    const skill_sel = JSON.parse(queue_battle[turn].skill)
+    const skill_status = await Use_Skill(context, skill_sel[0], Number(targets[0]), turn, queue_battle, effect_list)
+    event_logger += skill_status
+    await Battle_Save(context, user, id_battle,queue_battle, queue_dead, effect_list, turn, target)
+    await Battle_Clear(context)
+    const [event_logger_fin, keyboard]: any = await Battle_Detector(context)
+    event_logger += event_logger_fin
+    event_logger += await Battle_Printer(context)
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard.inline().oneTime() /*, attachment: attached.toString()*/ })
+}
+async function Battle_Load(context: any) {
+    console.log(`Load battle for user ${context.peerId}`)
     const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId }, include: { classify: true } })
     const battle_data: any = await prisma.battle.findFirst({ where: { id_user: user.id } })
     const queue_battle = JSON.parse(battle_data.queue_battle)
@@ -289,65 +343,29 @@ export async function Battle_Engine(context: any) {
     const effect_list = JSON.parse(battle_data.effect_list)
     let target = battle_data.target 
     let turn = battle_data.turn
-    //let current = context.eventPayload.current
-    
-    let event_logger = '' 
-    const keyboard = new KeyboardBuilder()
-    for (const current in queue_battle) {
-        if (current == turn) {
-            const alive_counter: any = await Counter_Enemy(queue_battle)
-            if (alive_counter.friend > 0 && alive_counter.enemy > 0) {
-                /*for (const i in effect_list) {
-                    if (effect_list[i]?.target == current) {
-                        const effect_sel = await Use_Effect(i, effect_list)
-                        if (effect_sel?.status == false) {
-                            /*if (current+2 > (alive_counter.friend + alive_counter.enemy)) {
-                                current = 0
-                            }
-                            else {
-                                current+=1
-                            }
-                        }
-                        event_logger += effect_sel?.message
-                    }
-                }*/
-                console.log('effect actived')
-                if (queue_battle[current].team == 'enemy' && queue_battle[current].health > 0) {
-                    //если ходит компьютер
-                    console.log('enemy turn')
-                    const target = await Target(queue_battle, 'friend')
-                    const skill_sel = JSON.parse(queue_battle[current].skill)
-                    const skill_status = await Use_Skill(skill_sel[0], Number(target[0]), current, queue_battle, effect_list)
-                    event_logger += skill_status
-                    const alive_counter1: any = await Counter_Enemy(queue_battle)
-                    if (alive_counter1.friend > 0 && alive_counter1.enemy > 0) {
-                        keyboard.callbackButton({ label: 'Следующий Ход', payload: { command: 'battle_engine' }, color: 'secondary' })
-                    }
-                }
-                if (queue_battle[current].team == 'friend' && queue_battle[current].health > 0) {
-                    //если ходит игрок
-                    console.log('player turn')
-                    const skill_sel = JSON.parse(queue_battle[current].skill)
-                    const target_sel = await Target(queue_battle, 'enemy')
-                    console.log("🚀 ~ file: contoller.ts:328 ~ Battle_Engine ~ target_sel:", target_sel)
-                    if (target_sel.includes(String(target))) { target = target } else { target = target_sel[randomInt(0, target_sel.length)] }
-                    const skill_status = await Use_Skill(skill_sel[0], target, current, queue_battle, effect_list)
-                    console.log("🚀 ~ file: contoller.ts:331 ~ Battle_Engine ~ target:", target)
-                    event_logger += skill_status
-                    const alive_counter2: any = await Counter_Enemy(queue_battle)
-                    if (alive_counter2.friend > 0 && alive_counter2.enemy > 0) {
-                        keyboard.callbackButton({ label: `${skill_sel[0]}`, payload: { command: 'battle_engine' }, color: 'secondary' })
-                    }
-                }
-                /*if (current+1 < (alive_counter.friend + alive_counter.enemy)) {
-                    current+=1
-                } else {
-                    current = 0
-                }*/
-            }
+    const id_battle = battle_data.id
+    return [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]
+}
+async function Battle_Save(context: any, user: any, id_battle: any, queue_battle: any, queue_dead: any, effect_list: any, turn: number, target: any) {
+    console.log(`Save battle for user ${context.peerId}`)
+    const battle_init = await prisma.battle.update({ where: { id: Number(id_battle) }, data: { queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list), queue_dead: JSON.stringify(queue_dead), turn: turn, target: Number(target) }})
+}
+async function Battle_Printer(context: any) {
+    console.log(`Print status battle for user ${context.peerId}`)
+    let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
+    const region: any = await prisma.region.findFirst({where: { uid: user.id_region }, include: { location: true}})
+    let event_logger = ''
+    event_logger += `🌐:${region.location.name}-${region.name}\n`
+    for (let i in queue_battle) {
+        if (queue_battle[i].health > 0) {
+            event_logger += await User_Print(queue_battle[i])
         }
-        
-    } 
+    }
+    return event_logger
+}
+async function Battle_Clear(context: any) {
+    console.log(`Clear dead creature in battle for user ${context.peerId}`)
+    let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
     //чистка трупов
     const limit = queue_battle.length
     for (let j= 0; j < limit; j++) {
@@ -356,15 +374,25 @@ export async function Battle_Engine(context: any) {
             if (queue_battle[i].health <= 0 && !detected) {
                 queue_dead.push(queue_battle[i])
                 queue_battle.splice(i, 1);
+                console.log("🚀 ~ file: contoller.ts:378 ~ Battle_Clear ~ turn:", turn)
                 turn >= i ? turn-- : turn=turn
+                console.log("🚀 ~ file: contoller.ts:378 ~ Battle_Clear ~ turn:", turn)
                 detected = true
             }
         }
     }
-    const region: any = await prisma.region.findFirst({where: { uid: user.id_region }, include: { location: true}})
-    event_logger += `🌐:${region.location.name}-${region.name}\n`
-    turn < queue_battle.length ? turn++ : turn=0
-    const alive_counter_end: any = await Counter_Enemy(queue_battle)
+    await Battle_Save(context, user, id_battle,queue_battle, queue_dead, effect_list, turn, target)
+}
+async function Battle_Detector(context: any) {
+    console.log(`Analyse situation battle for user ${context.peerId}`)
+    let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
+    console.log("🚀 ~ file: contoller.ts:389 ~ Battle_Detector ~ queue_battle:", queue_battle)
+    console.log("🚀 ~ file: contoller.ts:390 ~ Battle_Detector ~ turn:", turn)
+    turn < queue_battle.length-1 ? turn++ : turn=0
+    console.log("🚀 ~ file: contoller.ts:390 ~ Battle_Detector ~ turn:", turn)
+    const keyboard = new KeyboardBuilder()
+    let event_logger = ''
+    const alive_counter_end: any = await Counter_Enemy(context, queue_battle)
     if (alive_counter_end.friend <= 0 || alive_counter_end.enemy <= 0) {
         let xp = 0
         for (const i in queue_dead) {
@@ -379,39 +407,17 @@ export async function Battle_Engine(context: any) {
             event_logger += `Поражение, собрано ${xp} опыта, теперь на вашем счету: ${user_xp_add.xp} XP`
             keyboard.callbackButton({ label: 'Возрождение', payload: { command: 'controller_portal_dead' }, color: 'secondary' })
         }
-    } 
-    for (let i in queue_battle) {
-        if (queue_battle[i].health > 0) {
-            event_logger += await User_Print(queue_battle[i])
+    } else {
+        if (queue_battle[turn].team == 'friend') {
+            keyboard.callbackButton({ label: 'Ваш ход', payload: { command: 'battle_turn_player_ready' }, color: 'secondary' })
+        } else {
+            keyboard.callbackButton({ label: 'Следующий ход', payload: { command: 'battle_turn_enemy' }, color: 'secondary' })
         }
     }
-    
-    const battle_init = await prisma.battle.upsert({ create: { id_user: battle_data.id, queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list), queue_dead: JSON.stringify(queue_dead), turn: turn, target: Number(target) }, update: { queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list), queue_dead: JSON.stringify(queue_dead), turn: turn, target: Number(target) }, where: { id_user: battle_data?.id }})
-    keyboard.inline().oneTime()        
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
+    await Battle_Save(context, user, id_battle,queue_battle, queue_dead, effect_list, turn, target)
+    return [ event_logger, keyboard ]
 }
 
-export async function User_Win(context: any) {
-    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
-    const uid = context.eventPayload.uid
-    const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: uid }})
-    let event_logger = 'Опа чирик, новая локация и мобы нафиг!' 
-    
-    const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: 'Осмотреться', payload: { command: 'controller_portal' }, color: 'secondary' })
-    keyboard.inline().oneTime()        
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-}
-export async function User_Lose(context: any) {
-    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
-    const uid = context.eventPayload.uid
-    const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: uid }})
-    let event_logger = 'Вы воскресле у жертвенника при входе в порталы!' 
-    const keyboard = new KeyboardBuilder()
-    .callbackButton({ label: 'МММ', payload: { command: 'controller_portal_dead', uid: uid }, color: 'secondary' })
-    keyboard.inline().oneTime()        
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
-}
 export async function Controller_Portal_Dead(context: any) {
     const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
     const find_start_portal: any = await prisma.region.findFirst({ where: { uid: user.id_region } })

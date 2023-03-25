@@ -12,7 +12,7 @@ import { send } from 'process';
 import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 import { env } from 'process';
 import prisma from './engine/events/module/prisma_client';
-import { Battle_Engine, Battle_Event, Controller_Event, Controller_Portal, Controller_Portal_Dead, User_Add_Stat, User_Info, User_Lose, User_Nickname, User_Nickname_Select, User_Win } from './engine/events/contoller';
+import { Battle_Event, Battle_Turn_Enemy, Battle_Turn_Player, Battle_Turn_Player_Change_Target, Battle_Turn_Player_Ready, Controller_Event, Controller_Portal, Controller_Portal_Dead, User_Add_Stat, User_Info, User_Nickname, User_Nickname_Select } from './engine/events/contoller';
 import { User } from '@prisma/client';
 dotenv.config()
 
@@ -88,7 +88,7 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 		const visit = await context.send(`⌛ Погода сегодня солнечная, идти фармить?`,
 			{ 	
 				keyboard: Keyboard.builder()
-				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_portal' }, color: 'positive' }).oneTime().inline()
+				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_portal_dead' }, color: 'positive' }).oneTime().inline()
 			}
 		);
 	}
@@ -106,9 +106,10 @@ vk.updates.on('message_event', async (context: any, next: any) => {
 		"user_nickname": User_Nickname,
 		"user_nickname_select": User_Nickname_Select,
 		"battle_event": Battle_Event,
-		"battle_engine": Battle_Engine,
-		"user_win": User_Win,
-		"user_lose": User_Lose,
+		"battle_turn_player_ready": Battle_Turn_Player_Ready,
+		"battle_turn_player": Battle_Turn_Player,
+		"battle_turn_enemy": Battle_Turn_Enemy,
+		"battle_turn_player_change_target": Battle_Turn_Player_Change_Target,
 	}
 	//try {
 		await config[context.eventPayload.command](context)
