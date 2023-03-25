@@ -22,6 +22,7 @@ model User {
   id_region   Int      @default(0)
   skill       String
   crdate      DateTime @default(now())
+  update      DateTime @default(now())
   Battle      Battle[]
   classify    Classify @relation(fields: [id_classify], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }

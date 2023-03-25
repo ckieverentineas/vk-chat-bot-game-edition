@@ -322,7 +322,7 @@ export async function Battle_Turn_Player_Change_Target(context: any) {
     let event_logger = ``
     const keyboard = new KeyboardBuilder()
     if (!id_target) {
-        let event_logger = `Выберите цель:\n`
+        event_logger = `Выберите цель:\n`
         const target_sel = await Target(context, queue_battle, 'enemy')
         for (const i in target_sel) {
             keyboard.callbackButton({ label: `${Number(target_sel[i])+1}-${queue_battle[target_sel[i]].name}`, payload: { command: 'battle_turn_player_change_target', id_target: target_sel[i] }, color: 'secondary' }).row()
@@ -368,6 +368,8 @@ async function Battle_Load(context: any) {
 async function Battle_Save(context: any, user: any, id_battle: any, queue_battle: any, queue_dead: any, effect_list: any, turn: number, target: any) {
     console.log(`Save battle for user ${context.peerId}`)
     const battle_init = await prisma.battle.update({ where: { id: Number(id_battle) }, data: { queue_battle: JSON.stringify(queue_battle), effect_list: JSON.stringify(effect_list), queue_dead: JSON.stringify(queue_dead), turn: turn, target: Number(target) }})
+    const player = await Target(context, queue_battle, 'friend')
+    const user_save = await prisma.user.update({ where: { id: Number(user.id) }, data: { health: queue_battle[player[0]]?.health || 0 } })
 }
 async function Battle_Printer(context: any) {
     console.log(`Print status battle for user ${context.peerId}`)
@@ -447,7 +449,8 @@ export async function Controller_Portal_Dead(context: any) {
     const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
     const find_start_portal: any = await prisma.region.findFirst({ where: { uid: user.id_region } })
     const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: find_start_portal.uid_dead }})
-    let event_logger = 'Вы воскресле у жертвенника при входе в порталы!' 
+    const user_save = await prisma.user.update({ where: { id: Number(user.id) }, data: { health: user.health_max } })
+    let event_logger = 'Вы воскресле у жертвенника при входе в порталы.\nЗдоровье восстановлено полностью!' 
     const keyboard = new KeyboardBuilder()
     .callbackButton({ label: 'Возродиться', payload: { command: 'controller_portal' }, color: 'secondary' })
     keyboard.inline().oneTime()        

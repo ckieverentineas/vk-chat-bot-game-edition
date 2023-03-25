@@ -85,12 +85,18 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 		);
 		if (visit.isTimeout) { return await context.send(`⏰ Время ожидания активности истекло!`) }
 	} else {
-		const visit = await context.send(`⌛ Погода сегодня солнечная, идти фармить?`,
-			{ 	
-				keyboard: Keyboard.builder()
-				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_portal_dead' }, color: 'positive' }).oneTime().inline()
-			}
-		);
+		const datenow: any = new Date()
+		const dateold: any = user_check.update
+		if (datenow - dateold > 86400000) {
+			const visit = await context.send(`⌛ Погода сегодня солнечная, идти фармить?`,
+				{ 	
+					keyboard: Keyboard.builder()
+					.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_portal_dead' }, color: 'positive' }).oneTime().inline()
+				}
+			);
+		} else {
+			//await context.send(`🔔 Вы уже получали клавиатуру в: ${dateold.getDate()}-${dateold.getMonth()}-${dateold.getFullYear()} ${dateold.getHours()}:${dateold.getMinutes()}!\nПриходите через ${((86400000-(datenow-dateold))/60000/60).toFixed(2)} часов.`)
+		}
 	}
 	return next();
 })
