@@ -18,7 +18,11 @@ export async function User_Info(context: any) {
     let event_logger = ''
     if (user && user.point <= 0) {
         event_logger += 'Ваши характеристики:'
-        keyboard.callbackButton({ label: 'Дальше', payload: { command: 'user_nickname' }, color: 'secondary' })
+        if (user.name == "zero") {
+            keyboard.callbackButton({ label: 'Выбор ника', payload: { command: 'user_nickname' }, color: 'secondary' })
+        } else {
+            keyboard.callbackButton({ label: 'Назад', payload: { command: 'controller_portal' }, color: 'secondary' })
+        }
     } else {
         event_logger += 'Распределите характеристики:'
         keyboard.callbackButton({ label: '+⚔-⭐', payload: { command: 'user_add_stat', stat: "atk" }, color: 'secondary' })
@@ -107,7 +111,7 @@ export async function User_Nickname_Select(context: any) {
 
 async function User_Print(user: any) {
     const bar_current = user?.health/user?.health_max
-    const smile = user.classify == 'игрок' || user.classify == 1 ? "👤" : "🤖"
+    const smile = user.classify == 'игрок' || user.classify == 1 || user.classify.name == 'игрок' ? "👤" : "🤖"
     let bar = ''
     for (let i = 0; i <= 1; i += 0.1) {
         bar += (i < bar_current) ? '🟥' : '◻'
@@ -425,14 +429,20 @@ async function Battle_Detector(context: any) {
         for (const i in queue_dead) {
             if (queue_dead[i].team == 'enemy') { xp += queue_dead[i].xp }
         }
+        const user_xp_add = await prisma.user.update({ where: { id: user.id }, data: { xp: { increment: xp } } })
+        const xp_logger = `собрано ${xp} опыта, теперь на вашем счету: ${user_xp_add.xp} XP`
         if (alive_counter_end.friend > 0) {
-            const user_xp_add = await prisma.user.update({ where: { id: user.id }, data: { xp: { increment: xp } } })
-            event_logger += `Поздравляем, собрано ${xp} опыта, теперь на вашем счету: ${user_xp_add.xp} XP`
+            event_logger += `Поздравляем, ${xp_logger}\n`
             keyboard.callbackButton({ label: 'Дальше', payload: { command: 'controller_portal' }, color: 'secondary' }).row()
         } else {
-            const user_xp_add = await prisma.user.update({ where: { id: user.id }, data: { xp: { increment: xp } } })
-            event_logger += `Поражение, собрано ${xp} опыта, теперь на вашем счету: ${user_xp_add.xp} XP`
+            event_logger += `Поражение, ${xp_logger}\n`
             keyboard.callbackButton({ label: 'Возрождение', payload: { command: 'controller_portal_dead' }, color: 'secondary' })
+        }
+        const xp_for_next_lvl = Math.ceil(5.4321*user.lvl**1.6663)
+        if (user_xp_add.xp >= xp_for_next_lvl) {
+            const user_lvl_add = await prisma.user.update({ where: { id: user.id }, data: { xp: { decrement: xp_for_next_lvl }, lvl: { increment: 1 }, point: { increment: 1 } } })
+            event_logger += `Повышен уровень с ${user.lvl} до ${user_lvl_add.lvl}.\nПоинты увеличены с ${user.point} до ${user_lvl_add.point}.\n`
+            console.log(`Level up for ${context.peerId} with ${user.lvl} to ${user_lvl_add.lvl}`)
         }
     } else {
         if (queue_battle[turn].team == 'friend') {
@@ -457,7 +467,7 @@ export async function Controller_Portal_Dead(context: any) {
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
 }
 export async function Controller_Portal(context: any) {
-    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId }, include: { classify: true } })
     const region: any = await prisma.region.findFirst({where: { uid: user.id_region }})
     const region_next: any = []
     const region_current = JSON.parse(region.road)
@@ -472,13 +482,16 @@ export async function Controller_Portal(context: any) {
         //event_logger += `${region_next[i].label} - ${region_next[i].name}\n`
         keyboard.callbackButton({ label: region_next[i].label, payload: { command: 'controller_event', uid: region_next[i].uid }, color: 'secondary' }).row()
     }
+    if (region.id_location == 1) {
+        keyboard.callbackButton({ label: `Персонаж`, payload: { command: 'user_info' }, color: 'secondary' })
+    }
     const region_sel: any = await prisma.region.findFirst({where: { uid: user.id_region }, include: { location: true}})
     event_logger += `${await User_Print(user)}\n🌐:${region_sel.location.name}-${region_sel.name}\n`
     keyboard.inline().oneTime()  
     await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `${event_logger}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
 }
 export async function Controller_Event(context: any) {
-    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId }, include: { classify: true } })
     const uid = context?.eventPayload?.uid ? context.eventPayload.uid : user.uid
     const user_location = await prisma.user.update({ where: { id: user.id }, data: { id_region: uid }})
     let event_logger = '' 
