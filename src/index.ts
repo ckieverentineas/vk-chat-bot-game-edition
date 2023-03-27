@@ -12,7 +12,7 @@ import { send } from 'process';
 import * as dotenv from 'dotenv' // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 import { env } from 'process';
 import prisma from './engine/events/module/prisma_client';
-import { Battle_Event, Battle_Turn_Enemy, Battle_Turn_Player, Battle_Turn_Player_Change_Target, Battle_Turn_Player_Ready, Controller_Event, Controller_Portal, Controller_Portal_Dead, User_Add_Stat, User_Info, User_Nickname, User_Nickname_Select } from './engine/events/contoller';
+import { Battle_Event, Battle_Turn_Enemy, Battle_Turn_Player, Battle_Turn_Player_Change_Target, Battle_Turn_Player_Ready, Controller_Event, Controller_Portal, Controller_Portal_Dead, Sleep, User_Add_Stat, User_Info, User_Nickname, User_Nickname_Select } from './engine/events/contoller';
 import { User } from '@prisma/client';
 dotenv.config()
 
@@ -75,7 +75,7 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 			await context.send('⌛ Вы отказались дать свое согласие!');
 			return;
 		}
-		const user_creation: User = await prisma.user.create({ data: {idvk: context.senderId, skill: JSON.stringify(["Атака"]) }})
+		const user_creation: User = await prisma.user.create({ data: {idvk: context.senderId, skill: JSON.stringify({ active: ["Атака"], passive: [], death: [] }) }})
 		//приветствие игрока
 		const visit = await context.send(`⌛ Вы смотрели телик, как вдруг по всем каналам стали показывать, что повсюду стали открываться порталы, что они нам принесут, никто не знает, но народ уже пачками в них попер, а вы что?`,
 			{ 	
@@ -87,11 +87,11 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 	} else {
 		const datenow: any = new Date()
 		const dateold: any = user_check.update
-		if (datenow - dateold > 86400000) {
+		if (datenow - dateold > 100/*86400000*/) {
 			const visit = await context.send(`⌛ Погода сегодня солнечная, идти фармить?`,
 				{ 	
 					keyboard: Keyboard.builder()
-					.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_portal_dead' }, color: 'positive' }).oneTime().inline()
+					.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_event' }, color: 'positive' }).oneTime().inline()
 				}
 			);
 		} else {
@@ -101,6 +101,7 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 	return next();
 })
 vk.updates.on('message_event', async (context: any, next: any) => { 
+	await Sleep(1000)
 	const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
 	console.log(`${context.eventPayload.command} > ${user.id_region}`)
 	const config: any = {

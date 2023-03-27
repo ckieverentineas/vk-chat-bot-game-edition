@@ -5,7 +5,7 @@ import { User } from "@prisma/client";
 import { randomInt } from "crypto";
 
 
-function Sleep(ms: number) {
+export function Sleep(ms: number) {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
     });
@@ -13,7 +13,7 @@ function Sleep(ms: number) {
 
 export async function User_Info(context: any) {
     //const attached = await Image_Random(context, "bank")
-    const user: User | null = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+    const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
     const keyboard = new KeyboardBuilder()
     let event_logger = ''
     if (user && user.point <= 0) {
@@ -30,7 +30,7 @@ export async function User_Info(context: any) {
         .callbackButton({ label: '+🌀-⭐', payload: { command: 'user_add_stat', stat: "mana" }, color: 'secondary' })
     }
     keyboard.inline().oneTime()        
-    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `\n⚔Атака: ${user?.atk}\n❤Здоровье: ${user?.health_max}\n🌀Мана: ${user?.mana}\n⭐Очки: ${user?.point}\n`, keyboard: keyboard/*, attachment: attached.toString()*/ })
+    await vk.api.messages.edit({peer_id: context.peerId, conversation_message_id: context.conversationMessageId, message: `\n⚔Атака: ${user?.atk}\n❤Здоровье: ${user?.health_max}\n🌀Мана: ${user?.mana}\n⭐Очки: ${user?.point}\n📗Опыт: ${user.xp}/${Math.ceil(5.4321*user.lvl**1.6663)}\n📝Уровень: ${user.lvl}`, keyboard: keyboard/*, attachment: attached.toString()*/ })
 }
 export async function User_Add_Stat(context: any) {
     const stat_sel = context.eventPayload.stat
@@ -193,7 +193,6 @@ async function Use_Skill(context: any, skill: any, target: any, current: any, qu
     //контроллер скиллов в конфиге название в скиллах персонажей, а значение название функции скилла
     const config: any = {
         'Атака': Skill_Attack,
-        'Призыв обычных слизней': Skill_Summoning_Usually_Slime,
         'Медовое исцеление': Skill_Honey_Healing
     }
     try {
@@ -202,6 +201,24 @@ async function Use_Skill(context: any, skill: any, target: any, current: any, qu
     } catch (e) {
         return e
     }
+}
+async function Skill_Analyzer(context: any, skill: any, target: any, current: any, queue_battle: any, effect_list: any) {
+    console.log(`Skill selected by ${queue_battle[current].team} in battle for user ${context.peerId}`)
+    //контроллер скиллов в конфиге название в скиллах персонажей, а значение название функции скилла
+    const config: any = {
+        'Атака': { mana: 0, health_lost: 'n'},
+        'Медовое исцеление': { mana: 1, health_lost: 3}
+    }
+    const skill_available = []
+    for (const i in skill) {
+        if (config[skill[i]].mana <= queue_battle[current].mana && (config[skill[i]].health_lost <= queue_battle[current].health_max-queue_battle[current].health || config[skill[i]].health_lost == "n") ) {
+            skill_available.push(skill[i])
+        }
+    }
+    if (skill_available.length > 1) {
+        skill_available.splice(0, 1);
+    }
+    return skill_available
 }
 async function Skill_Attack(context: any, skill:any, target: number, current: number, queue_battle: any, effect_list: any) {
     console.log(`Skill attack by ${queue_battle[current].team} in battle for user ${context.peerId}`)
@@ -213,30 +230,50 @@ async function Skill_Attack(context: any, skill:any, target: number, current: nu
     }*/
     return res
 }
-async function Skill_Summoning_Usually_Slime(skill:any, target: any, current: any, queue_battle: any, effect_list: any) {
-    if (queue_battle[current].health <= 0 && queue_battle[current].mana > 0) { 
+
+async function Skill_Honey_Healing(context: any, skill:any, target: any, current: any, queue_battle: any, effect_list: any) {
+    let event_logger = ''
+    if (queue_battle[current].mana > 0) { 
+        queue_battle[current].health+=3
+        queue_battle[current].mana--
+        event_logger = `🔪${queue_battle[current].name}>${skill}>Восстановлено здоровья: 3\n`
+    } else {
+        event_logger = `🔪${queue_battle[current].name}>${skill}>Недостаточно маны!\n`
+    }
+    return event_logger
+}
+
+async function Use_Skill_Death(context: any, skill: any, target: any, current: any, queue_battle: any, effect_list: any, queue_dead: any) {
+    console.log(`Skill Death selected by ${queue_dead[current].team} in battle for user ${context.peerId}`)
+    //контроллер скиллов в конфиге название в скиллах персонажей, а значение название функции скилла
+    const config: any = {
+        'Разложение на обычных слизней': Skill_Death_Decomposition_Into_Usually_Slime,
+    }
+    try {
+        const res = config[skill](context, skill, target, current, queue_battle, effect_list, queue_dead)
+        return res
+    } catch (e) {
+        return e
+    }
+}
+async function Skill_Death_Decomposition_Into_Usually_Slime(context: any, skill:any, target: any, current: any, queue_battle: any, effect_list: any, queue_dead: any) {
+    console.log(`Skill Death Decomposition Into Usually Slime used by ${queue_dead[current].team} in battle for user ${context.peerId}`)
+    let event_logger = ''
+    if (queue_dead[current].mana > 0) { 
         let summoning_counter = 0
-        for (let i=0; i<queue_battle[current].mana; i++) {
+        const mob_sel: any = await prisma.mob.findFirst({ where: { name: "Слизь" }, include: { classify: true }})
+        for (let i=0; i<queue_dead[current].mana; i++) {
+            queue_battle.push({ classify: mob_sel.classify.name, team: 'enemy', xp: mob_sel.xp, name: mob_sel.name, atk: mob_sel.atk, health: mob_sel.health, health_max: mob_sel.health_max, mana: mob_sel.mana, skill: mob_sel.skill })
             queue_battle.push({ name: "Слизь", type: "bot", team: 'enemy', atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'] }) 
             summoning_counter++
         }
-        queue_battle[current].mana-=summoning_counter
-        let res = `🔪${queue_battle[current].name}>${skill}>Призвано обычных слизней: ${summoning_counter}\n`
-        return res
+        queue_dead[current].mana-=summoning_counter
+        event_logger  = `🔪${queue_dead[current].name}>${skill}>Призвано обычных слизней: ${summoning_counter}\n`
+    } else {
+        event_logger  = `🔪${queue_dead[current].name}>${skill}>Не хватило маны\n`
     }
-    return ''
+    return event_logger
 }
-async function Skill_Honey_Healing(skill:any, target: any, current: any, queue_battle: any, effect_list: any) {
-    if (queue_battle[current].health <= queue_battle[current].health_max && queue_battle[target].health - queue_battle[current].atk > 0 && queue_battle[current].mana > 0) { 
-        queue_battle[current].health+=3
-        queue_battle[current].mana--
-
-        let res = `🔪${queue_battle[current].name}>${skill}>Восстановлено здоровья: 3\n`
-        return res
-    }
-    return ''
-}
-        
         
 export async function Battle_Event(context: any) {
     //Стадия подготовки данных к битве
@@ -256,12 +293,14 @@ export async function Battle_Event(context: any) {
     }
     const queue_battle_init: any = []
     queue_battle_init.push({ classify: user.classify.name, team: 'friend', xp: user.xp, name: user.name, atk: user.atk, health: user.health, health_max: user.health_max, mana: user.mana, skill: user.skill })
-    const enemy_will: any = (region.mob_min == region.mob_max) ? region.mob_min : randomInt(region.mob_min, region.mob_max)
+    const enemy_will: any = (region.mob_min == region.mob_max) ? region.mob_min : randomInt(region.mob_min, region.mob_max+1)
     for (let i=0; i < enemy_will; i++) {
         queue_battle_init.push(creature.mob[randomInt(0, creature.mob.length)])
     }
     for (let i=0; i < region.boss; i++) {
-        queue_battle_init.push(creature.boss[randomInt(0, creature.mob.length)])
+        if (creature.boss.length > 0) {
+            queue_battle_init.push(creature.boss[randomInt(0, creature.mob.length)])
+        }
     }
     const queue_battle: any = []
     const limit = queue_battle_init.length
@@ -291,9 +330,11 @@ export async function Battle_Turn_Player_Ready(context: any) {
     let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
     let event_logger = `Ваш ход, что предпримете?\n`
     //если ходит игрок
-    const skill_sel = JSON.parse(queue_battle[turn].skill)
+    console.log("🚀 ~ file: contoller.ts:295 ~ Battle_Turn_Player_Ready ~ queue_battle[turn].skill:", queue_battle[turn].skill)
+    
     const target_sel = await Target(context, queue_battle, 'enemy')
     if (target_sel.includes(String(target))) { target = target } else { target = target_sel[randomInt(0, target_sel.length)] }
+    const skill_sel = await Skill_Analyzer(context, JSON.parse(queue_battle[turn].skill).active, target, turn, queue_battle, effect_list)
     await Battle_Save(context, user, id_battle,queue_battle, queue_dead, effect_list, turn, target)
     const keyboard = new KeyboardBuilder()
     for (const i in skill_sel) {
@@ -315,6 +356,7 @@ export async function Battle_Turn_Player(context: any) {
     event_logger += skill_status
     await Battle_Save(context, user, id_battle,queue_battle, queue_dead, effect_list, turn, target)
     await Battle_Clear(context)
+    event_logger += await Battle_Detector_Skill_Death(context)
     const [event_logger_fin, keyboard]: any = await Battle_Detector(context)
     event_logger += event_logger_fin
     event_logger += await Battle_Printer(context)
@@ -347,11 +389,12 @@ export async function Battle_Turn_Enemy(context: any) {
     let event_logger = ''
     const alive_counter: any = await Counter_Enemy(context, queue_battle)
     const targets = await Target(context, queue_battle, 'friend')
-    const skill_sel = JSON.parse(queue_battle[turn].skill)
-    const skill_status = await Use_Skill(context, skill_sel[0], Number(targets[0]), turn, queue_battle, effect_list)
+    const skill_sel = await Skill_Analyzer(context, JSON.parse(queue_battle[turn].skill).active, Number(targets[0]), turn, queue_battle, effect_list)
+    const skill_status = await Use_Skill(context, skill_sel[randomInt(0, skill_sel.length)], Number(targets[0]), turn, queue_battle, effect_list)
     event_logger += skill_status
     await Battle_Save(context, user, id_battle,queue_battle, queue_dead, effect_list, turn, target)
     await Battle_Clear(context)
+    event_logger += await Battle_Detector_Skill_Death(context)
     const [event_logger_fin, keyboard]: any = await Battle_Detector(context)
     event_logger += event_logger_fin
     event_logger += await Battle_Printer(context)
@@ -405,22 +448,34 @@ async function Battle_Clear(context: any) {
             if (queue_battle[i].health <= 0 && !detected) {
                 queue_dead.push(queue_battle[i])
                 queue_battle.splice(i, 1);
-                console.log("🚀 ~ file: contoller.ts:378 ~ Battle_Clear ~ turn:", turn)
                 turn >= i ? turn-- : turn=turn
-                console.log("🚀 ~ file: contoller.ts:378 ~ Battle_Clear ~ turn:", turn)
                 detected = true
             }
         }
     }
     await Battle_Save(context, user, id_battle,queue_battle, queue_dead, effect_list, turn, target)
 }
+async function Battle_Detector_Skill_Death(context: any) {
+    console.log(`Finder dead skills from creature in battle for user ${context.peerId}`)
+    let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
+    //детектор скиллов смерти
+    let event_logger = ''
+    for (const i in queue_dead) {
+        if (queue_dead[i].skill.death?.length > 0) {
+            const skill_death = queue_dead[i].skill.death[0]
+            const skill_death_activation = await Use_Skill_Death(context, skill_death, target, turn, queue_battle, effect_list, queue_dead)
+            event_logger += skill_death_activation
+            queue_dead[i].skill.death.splice(i, 1);
+        }
+    }
+    
+    await Battle_Save(context, user, id_battle,queue_battle, queue_dead, effect_list, turn, target)
+    return event_logger
+}
 async function Battle_Detector(context: any) {
     console.log(`Analyse situation battle for user ${context.peerId}`)
     let [id_battle, user, queue_battle, queue_dead, effect_list, target, turn]: any = await Battle_Load(context)
-    console.log("🚀 ~ file: contoller.ts:389 ~ Battle_Detector ~ queue_battle:", queue_battle)
-    console.log("🚀 ~ file: contoller.ts:390 ~ Battle_Detector ~ turn:", turn)
     turn < queue_battle.length-1 ? turn++ : turn=0
-    console.log("🚀 ~ file: contoller.ts:390 ~ Battle_Detector ~ turn:", turn)
     const keyboard = new KeyboardBuilder()
     let event_logger = ''
     const alive_counter_end: any = await Counter_Enemy(context, queue_battle)

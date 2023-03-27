@@ -74,22 +74,22 @@ export function InitGameRoutes(hearManager: HearManager<IQuestionMessageContext>
 		const creature: any = [
 			{
 				mob: [
-					{ name: "Слизь", team: 'enemy', xp: 1, atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'], target_classify: classify[1] },
-					{ name: "Слизень Босс", team: 'enemy', xp: 3, atk: 2, health: 8, health_max: 8, mana: 2, skill: ['Атака', 'Призыв обычных слизней'], target_classify: classify[2] }
+					{ name: "Слизь", team: 'enemy', xp: 1, atk: 1, health: 4, health_max: 4, mana: 0, skill: { active: ['Атака'], passive: [], death: [] }, target_classify: classify[1] },
+					{ name: "Слизень Босс", team: 'enemy', xp: 3, atk: 2, health: 8, health_max: 8, mana: 2, skill: { active: ['Атака'], passive: [], death: ['Разложение на обычных слизней'] }, target_classify: classify[2] }
 				],
 				target: location[1] 
 			}, 
 			{
 				mob: [
-					{ name: "Пчела", team: 'enemy', xp: 1, atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Атака'], target_classify: classify[1] },
-					{ name: "Пчела Босс", team: 'enemy', xp: 3, atk: 3, health: 6, health_max: 6, mana: 2, skill: ['Атака', 'Медовое исцеление'], target_classify: classify[2] },
+					{ name: "Пчела", team: 'enemy', xp: 1, atk: 2, health: 2, health_max: 2, mana: 0, skill: { active: ['Атака'], passive: [], death: [] }, target_classify: classify[1] },
+					{ name: "Пчела Босс", team: 'enemy', xp: 3, atk: 3, health: 6, health_max: 6, mana: 2, skill: { active: ['Атака', 'Медовое исцеление'], passive: [], death: [] }, target_classify: classify[2] },
 				],
 				target: location[2]
 			}, 
 			{
 				mob: [
-					{ name: "Мышь Черная", team: 'enemy', xp: 1, atk: 2, health: 2, health_max: 2, mana: 0, skill: ['Атака'], target_classify: classify[1] },
-					{ name: "Мышь Серая", team: 'enemy', xp: 3, atk: 1, health: 4, health_max: 4, mana: 0, skill: ['Атака'], target_classify: classify[1] }
+					{ name: "Мышь Черная", team: 'enemy', xp: 1, atk: 2, health: 2, health_max: 2, mana: 0, skill: { active: ['Атака'], passive: [], death: [] }, target_classify: classify[1] },
+					{ name: "Мышь Серая", team: 'enemy', xp: 3, atk: 1, health: 4, health_max: 4, mana: 0, skill: { active: ['Атака'], passive: [], death: [] }, target_classify: classify[1] }
 				],
 				target: location[3]
 			}
@@ -103,6 +103,9 @@ export function InitGameRoutes(hearManager: HearManager<IQuestionMessageContext>
 				if (!id_region) {
 					const creature_create: any = await prisma.mob.create({ data: { id_location: id_location.id, id_classify: id_classify.id, xp: reg.xp, name: reg.name, atk: reg.atk, health: reg.health, health_max: reg.health_max, mana: reg.mana, skill: JSON.stringify(reg.skill) } })
 					console.log(`Добавлен новый моб: ${creature_create.name}`)
+				} else {
+					const creature_create: any = await prisma.mob.update({ where: { name: reg.name }, data: { id_location: id_location.id, id_classify: id_classify.id, xp: reg.xp, name: reg.name, atk: reg.atk, health: reg.health, health_max: reg.health_max, mana: reg.mana, skill: JSON.stringify(reg.skill) } })
+					console.log(`Обновлен моб: ${creature_create.name}`)
 				}
 			}
 		}
