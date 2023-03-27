@@ -14,6 +14,7 @@ import { env } from 'process';
 import prisma from './engine/events/module/prisma_client';
 import { Battle_Event, Battle_Turn_Enemy, Battle_Turn_Player, Battle_Turn_Player_Change_Target, Battle_Turn_Player_Ready, Controller_Event, Controller_Portal, Controller_Portal_Dead, Sleep, User_Add_Stat, User_Info, User_Nickname, User_Nickname_Select } from './engine/events/contoller';
 import { User } from '@prisma/client';
+import { create } from 'domain';
 dotenv.config()
 
 export const token: string = String(process.env.token)
@@ -80,20 +81,25 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 		const visit = await context.send(`⌛ Вы смотрели телик, как вдруг по всем каналам стали показывать, что повсюду стали открываться порталы, что они нам принесут, никто не знает, но народ уже пачками в них попер, а вы что?`,
 			{ 	
 				keyboard: Keyboard.builder()
-				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'user_info' }, color: 'positive' }).oneTime().inline()
+				.callbackButton({ label: 'Выйти на улицу', payload: { command: 'user_info', security: `${user_creation.idvk}${user_creation.name}` }, color: 'positive' }).oneTime().inline()
 			}
 		);
+		const datenow: any = new Date()
+		const update_security = await prisma.antiflud.upsert({ create: { id_user: user_creation.id, id_message: '0', date_message: new Date(), busy: false}, update: { id_message: '0', date_message: new Date(), busy: false}, where: { id_user: user_creation.id} })
+		const update_user = await prisma.user.update({ where: { id: user_creation.id}, data: { update: datenow } })
 		if (visit.isTimeout) { return await context.send(`⏰ Время ожидания активности истекло!`) }
 	} else {
 		const datenow: any = new Date()
 		const dateold: any = user_check.update
-		if (datenow - dateold > 100/*86400000*/) {
+		if (datenow - dateold > 100) {
 			const visit = await context.send(`⌛ Погода сегодня солнечная, идти фармить?`,
 				{ 	
 					keyboard: Keyboard.builder()
-					.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_event' }, color: 'positive' }).oneTime().inline()
+					.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_event', security: `${user_check.idvk}${user_check.name}` }, color: 'positive' }).oneTime().inline()
 				}
 			);
+			const update_security = await prisma.antiflud.upsert({ create: { id_user: user_check.id, id_message: '0', date_message: new Date(), busy: false}, update: { id_message: '0', date_message: new Date(), busy: false}, where: { id_user: user_check.id} })
+			const update_user = await prisma.user.update({ where: { id: user_check.id}, data: { update: datenow } })
 		} else {
 			//await context.send(`🔔 Вы уже получали клавиатуру в: ${dateold.getDate()}-${dateold.getMonth()}-${dateold.getFullYear()} ${dateold.getHours()}:${dateold.getMinutes()}!\nПриходите через ${((86400000-(datenow-dateold))/60000/60).toFixed(2)} часов.`)
 		}
@@ -101,8 +107,25 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 	return next();
 })
 vk.updates.on('message_event', async (context: any, next: any) => { 
-	await Sleep(1000)
 	const user: any = await prisma.user.findFirst({ where: { idvk: context.peerId } })
+	const security = context.eventPayload?.security || null
+	if (security == `${user.idvk}${user.name}`) {
+		const security_save = await prisma.antiflud.update({ where: { id_user: user.id }, data: { id_message: String(context.conversationMessageId), busy: true }})
+	} else {
+		const security = await prisma.antiflud.findFirst({ where: { id_user: user.id } })
+		if (context.conversationMessageId != security?.id_message) {
+			await vk.api.messages.sendMessageEventAnswer({ event_id: context.eventId, user_id: context.userId, peer_id: context.peerId, event_data: JSON.stringify({ type: "show_snackbar", text: `🔔 Внимание, клавиатура устарела, получите новую!` }) })  
+			return
+		}
+		if (security?.busy) {
+			await vk.api.messages.sendMessageEventAnswer({ event_id: context.eventId, user_id: context.userId, peer_id: context.peerId, event_data: JSON.stringify({ type: "show_snackbar", text: `🔔 Внимание, мы вычисляем, имейте терпение!` }) })  
+			return
+		} else {
+			const security = await prisma.antiflud.update({ where: { id_user: user.id }, data: { busy: true }})
+		}
+	}
+	await Sleep(1000)
+	
 	console.log(`${context.eventPayload.command} > ${user.id_region}`)
 	const config: any = {
 		"controller_portal": Controller_Portal, //управление порталами
@@ -118,12 +141,14 @@ vk.updates.on('message_event', async (context: any, next: any) => {
 		"battle_turn_enemy": Battle_Turn_Enemy,
 		"battle_turn_player_change_target": Battle_Turn_Player_Change_Target,
 	}
-	//try {
+	try {
 		await config[context.eventPayload.command](context)
-	/*} catch (e) {
+	} catch (e) {
+		const security_change = await prisma.antiflud.update({ where: { id_user: user.id }, data: { busy: false }})
 		console.log(`Ошибка события ${e}`)
 	}
-	return await next();*/
+	const security_change = await prisma.antiflud.update({ where: { id_user: user.id }, data: { busy: false }})
+	return await next();
 })
 
 vk.updates.start().then(() => {
