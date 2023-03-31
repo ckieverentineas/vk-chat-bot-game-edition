@@ -91,11 +91,11 @@ vk.updates.on('message_new', async (context: any, next: any) => {
 	} else {
 		const datenow: any = new Date()
 		const dateold: any = user_check.update
-		if (datenow - dateold > 100) {
+		if (datenow - dateold > 1000) {
 			const visit = await context.send(`⌛ Погода сегодня солнечная, идти фармить?`,
 				{ 	
 					keyboard: Keyboard.builder()
-					.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_event', security: `${user_check.idvk}${user_check.name}` }, color: 'positive' }).oneTime().inline()
+					.callbackButton({ label: 'Выйти на улицу', payload: { command: 'controller_portal_dead', security: `${user_check.idvk}${user_check.name}` }, color: 'positive' }).oneTime().inline()
 				}
 			);
 			const update_security = await prisma.antiflud.upsert({ create: { id_user: user_check.id, id_message: '0', date_message: new Date(), busy: false}, update: { id_message: '0', date_message: new Date(), busy: false}, where: { id_user: user_check.id} })
@@ -123,8 +123,11 @@ vk.updates.on('message_event', async (context: any, next: any) => {
 		} else {
 			const security = await prisma.antiflud.update({ where: { id_user: user.id }, data: { busy: true }})
 		}
+		/*if (security?.date_message && new Date(security.date_message) >= 86400000) {
+
+		}*/
 	}
-	await Sleep(1000)
+	//await Sleep(4000)
 	
 	console.log(`${context.eventPayload.command} > ${user.id_region}`)
 	const config: any = {
